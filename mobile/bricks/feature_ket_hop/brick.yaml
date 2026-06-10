@@ -1,0 +1,14 @@
+name: feature_ket_hop
+description: Generate a feature with Combined pattern (List + Card + Detail Widget)
+version: 1.0.0
+
+# Repository info (optional)
+repository: https://github.com/LoiPham2005/flutter_base_template
+
+# Variables
+vars:
+  feature_name:
+    type: string
+    description: Feature name (e.g., product, user, post)
+    prompt: What is the feature name?
+    default: feature

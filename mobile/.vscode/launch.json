@@ -1,0 +1,113 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    // ═══════════════════════════════════════════════════════════
+    // 🧑‍💻 DEVELOPMENT
+    // ═══════════════════════════════════════════════════════════
+    {
+      "name": "🧑‍💻 Dev (Debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_dev.dart",
+      "args": [
+        "--flavor",
+        "dev"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "🧑‍💻 Dev (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_dev.dart",
+      "args": [
+        "--flavor",
+        "dev"
+      ],
+      "flutterMode": "profile"
+    },
+    {
+      "name": "🧑‍💻 Dev (Release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_dev.dart",
+      "args": [
+        "--flavor",
+        "dev"
+      ],
+      "flutterMode": "release"
+    },
+    // ═══════════════════════════════════════════════════════════
+    // 🧪 STAGING
+    // ═══════════════════════════════════════════════════════════
+    {
+      "name": "🧪 Stg (Debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_stg.dart",
+      "args": [
+        "--flavor",
+        "stg"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "🧪 Stg (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_stg.dart",
+      "args": [
+        "--flavor",
+        "stg"
+      ],
+      "flutterMode": "profile"
+    },
+    {
+      "name": "🧪 Stg (Release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_stg.dart",
+      "args": [
+        "--flavor",
+        "stg"
+      ],
+      "flutterMode": "release"
+    },
+    // ═══════════════════════════════════════════════════════════
+    // 🚀 PRODUCTION
+    // ═══════════════════════════════════════════════════════════
+    {
+      "name": "🚀 Prod (Debug)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_prod.dart",
+      "args": [
+        "--flavor",
+        "prod"
+      ],
+      "flutterMode": "debug"
+    },
+    {
+      "name": "🚀 Prod (Profile)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_prod.dart",
+      "args": [
+        "--flavor",
+        "prod"
+      ],
+      "flutterMode": "profile"
+    },
+    {
+      "name": "🏁 Prod (Release)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_prod.dart",
+      "args": [
+        "--flavor",
+        "prod"
+      ],
+      "flutterMode": "release"
+    }
+  ]
+}

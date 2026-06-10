@@ -1,0 +1,11 @@
+bricks:
+  feature_co_dien:
+    path: bricks/feature_co_dien
+  feature_rut_gon:
+    path: bricks/feature_rut_gon
+  feature_ket_hop:
+    path: bricks/feature_ket_hop
+  feature_rut_gon_gen:
+    path: bricks/feature_rut_gon_gen
+  feature_rut_gon_thu_cong:
+    path: bricks/feature_rut_gon_thu_cong

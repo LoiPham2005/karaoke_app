@@ -1,0 +1,55 @@
+name: feature_co_dien
+description: Generate complete feature with Clean Architecture (Domain + Data + Presentation)
+version: 1.0.0
+
+# Repository info (optional)
+repository: https://github.com/your-repo/flutter_base_template
+
+# Variables
+vars:
+  feature_name:
+    type: string
+    description: Feature name (e.g., product, category, user)
+    prompt: What is the feature name?
+
+  # state:
+  #   type: enum
+  #   description: State management type
+  #   prompt: Which state management?
+  #   default: bloc
+  #   values:
+  #     - bloc
+  #     - cubit
+  #     - getx
+  #     - provider
+  #     - riverpod
+
+  has_list:
+    type: boolean
+    description: Generate list methods (getAll)?
+    prompt: Need list methods?
+    default: true
+
+  has_detail:
+    type: boolean
+    description: Generate detail methods (getById)?
+    prompt: Need detail methods?
+    default: true
+
+  has_create:
+    type: boolean
+    description: Generate create methods?
+    prompt: Need create methods?
+    default: false
+
+  has_update:
+    type: boolean
+    description: Generate update methods?
+    prompt: Need update methods?
+    default: false
+
+  has_delete:
+    type: boolean
+    description: Generate delete methods?
+    prompt: Need delete methods?
+    default: false

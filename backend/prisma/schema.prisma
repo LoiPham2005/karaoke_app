@@ -1,0 +1,243 @@
+// Karaoke App - Prisma Schema
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =================== ENUMS ===================
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum ContribStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+}
+
+// =================== USER & AUTH ===================
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String?
+  googleId        String?   @unique
+  displayName     String
+  avatarUrl       String?
+  bio             String?
+  role            Role      @default(USER)
+  isEmailVerified Boolean   @default(false)
+  isPremium       Boolean   @default(false)
+  premiumUntil    DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  playlists      Playlist[]
+  favorites      Favorite[]
+  history        History[]
+  queueItems     QueueItem[]
+  contributions  LyricsContribution[]
+  reports        SongReport[]
+  refreshTokens  RefreshToken[]
+  emailTokens    EmailVerificationToken[]
+  passwordResets PasswordResetToken[]
+
+  @@index([email])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// =================== SONGS ===================
+model Song {
+  youtubeId     String   @id
+  title         String
+  artist        String?
+  thumbnailUrl  String?
+  duration      Int      // seconds
+  viewCount     Int      @default(0)
+  playCountApp  Int      @default(0) // số lượt phát trong app
+  hasLyrics     Boolean  @default(false)
+  isKaraoke     Boolean  @default(true)
+  isAvailable   Boolean  @default(true)
+  category      String?
+  cachedAt      DateTime @default(now())
+  lastCheckedAt DateTime @default(now())
+
+  lyrics        Lyrics?
+  favorites     Favorite[]
+  history       History[]
+  playlistItems PlaylistItem[]
+  reports       SongReport[]
+
+  @@index([title])
+  @@index([artist])
+  @@index([category])
+  @@index([playCountApp])
+}
+
+// =================== LYRICS ===================
+model Lyrics {
+  id         String   @id @default(uuid())
+  songId     String   @unique
+  lrcContent String   @db.Text
+  source     String   // 'lrclib', 'musixmatch', 'user'
+  language   String?
+  isVerified Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  song          Song                 @relation(fields: [songId], references: [youtubeId], onDelete: Cascade)
+  contributions LyricsContribution[]
+}
+
+model LyricsContribution {
+  id        String        @id @default(uuid())
+  userId    String
+  lyricsId  String
+  content   String        @db.Text
+  status    ContribStatus @default(PENDING)
+  note      String?
+  createdAt DateTime      @default(now())
+  reviewedAt DateTime?
+
+  user   User   @relation(fields: [userId], references: [id])
+  lyrics Lyrics @relation(fields: [lyricsId], references: [id])
+
+  @@index([status])
+}
+
+// =================== PLAYLIST ===================
+model Playlist {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  isPublic    Boolean  @default(false)
+  coverUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items PlaylistItem[]
+
+  @@index([userId])
+}
+
+model PlaylistItem {
+  id         String   @id @default(uuid())
+  playlistId String
+  songId     String
+  position   Int
+  addedAt    DateTime @default(now())
+
+  playlist Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  song     Song     @relation(fields: [songId], references: [youtubeId])
+
+  @@unique([playlistId, songId])
+  @@index([playlistId, position])
+}
+
+// =================== QUEUE (hàng chờ phát) ===================
+model QueueItem {
+  id       String   @id @default(uuid())
+  userId   String
+  songId   String
+  position Int
+  addedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, position])
+}
+
+// =================== FAVORITE ===================
+model Favorite {
+  id        String   @id @default(uuid())
+  userId    String
+  songId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  song Song @relation(fields: [songId], references: [youtubeId])
+
+  @@unique([userId, songId])
+  @@index([userId])
+}
+
+// =================== HISTORY ===================
+model History {
+  id       String   @id @default(uuid())
+  userId   String
+  songId   String
+  playedAt DateTime @default(now())
+  duration Int?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  song Song @relation(fields: [songId], references: [youtubeId])
+
+  @@index([userId, playedAt])
+}
+
+// =================== REPORTS ===================
+model SongReport {
+  id        String       @id @default(uuid())
+  userId    String
+  songId    String
+  reason    String
+  detail    String?
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+  resolvedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id])
+  song Song @relation(fields: [songId], references: [youtubeId])
+
+  @@index([status])
+}

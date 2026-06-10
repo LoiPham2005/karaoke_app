@@ -1,0 +1,11 @@
+flutter_gen:
+  output: lib/gen
+  line_length: 80
+  integrations:
+    flutter_svg: true
+    lottie: true
+  assets:
+    enabled: true
+    outputs:
+      class_name: Assets
+      style: dot-delimiter

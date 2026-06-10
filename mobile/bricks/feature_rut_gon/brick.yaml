@@ -1,0 +1,11 @@
+name: feature_rut_gon
+description: Generate feature with Simplified Clean Architecture (Rut Gon - Repo + Service, no UseCase)
+version: 1.0.0
+
+repository: https://github.com/your-repo/flutter_base_template
+
+vars:
+  feature_name:
+    type: string
+    description: Feature name (e.g., product, category, user)
+    prompt: What is the feature name?

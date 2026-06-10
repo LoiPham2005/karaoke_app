@@ -1,0 +1,66 @@
+# instructions:
+#   - android:androidManifest
+#   - android:flavorizrGradle
+#   - android:dummyAssets
+#   - android:icons
+#   - ios:xcconfig
+#   - ios:plist
+#   - ios:runnerProject
+#   - ios:icons
+
+app:
+  android:
+    flavorDimensions: "flavor"
+  ios: {}
+
+flavors:
+  # ════════════════════════════════════════════════════════════
+  # DEVELOPMENT
+  # ════════════════════════════════════════════════════════════
+  dev:
+    app:
+      name: "MyApp Dev"
+    android:
+      applicationId: "com.flutter.base.dev"
+      icon: "assets/icons/dev.png"
+      # firebase:
+      #   config: "android/app/src/dev/google-services.json"
+    ios:
+      bundleId: "com.flutter.base.dev"
+      icon: "assets/icons/dev.png"
+      # firebase:
+      #   config: "ios/Runner/dev/GoogleService-Info.plist"
+
+  # ════════════════════════════════════════════════════════════
+  # STAGING
+  # ════════════════════════════════════════════════════════════
+  stg:
+    app:
+      name: "MyApp Stg"
+    android:
+      applicationId: "com.flutter.base.stg"
+      icon: "assets/icons/stg.png"
+      # firebase:
+      #   config: "android/app/src/stg/google-services.json"
+    ios:
+      bundleId: "com.flutter.base.stg"
+      icon: "assets/icons/stg.png"
+      # firebase:
+      #   config: "ios/Runner/stg/GoogleService-Info.plist"
+
+  # ════════════════════════════════════════════════════════════
+  # PRODUCTION
+  # ════════════════════════════════════════════════════════════
+  prod:
+    app:
+      name: "MyApp"
+    android:
+      applicationId: "com.flutter.base"
+      icon: "assets/icons/prod.png"
+      # firebase:
+      #   config: "android/app/src/prod/google-services.json"
+    ios:
+      bundleId: "com.flutter.base"
+      icon: "assets/icons/prod.png"
+      # firebase:
+      #   config: "ios/Runner/prod/GoogleService-Info.plist"

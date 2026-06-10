@@ -1,0 +1,91 @@
+{
+  "dart.flutterSdkPath": ".fvm/versions/3.41.5",
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.formatOnType": true,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.fixAll": "explicit"
+  },
+  "[dart]": {
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.rulers": [
+      100
+    ],
+    "editor.selectionHighlight": false,
+    "editor.suggest.snippetsPreventQuickSuggestions": false,
+    "editor.suggestSelection": "first",
+    "editor.tabCompletion": "onlySnippets",
+    "editor.wordBasedSuggestions": "off",
+    "editor.defaultFormatter": "Dart-Code.dart-code",
+    "editor.inlayHints.enabled": "offUnlessPressed"
+  },
+  "dart.lineLength": 100,
+  "dart.flutterHotReloadOnSave": "always",
+  "dart.flutterHotRestartOnSave": "never",
+  "dart.debugExternalPackageLibraries": false,
+  "dart.debugSdkLibraries": false,
+  "dart.showTodos": true,
+  "dart.openDevTools": "flutter",
+  "dart.previewFlutterUiGuides": true,
+  "dart.previewFlutterUiGuidesCustomTracking": true,
+  "dart.closingLabels": true,
+  "dart.enableSnippets": true,
+  "dart.warnWhenEditingFilesOutsideWorkspace": true,
+  "files.associations": {
+    "*.json": "jsonc"
+  },
+  "files.exclude": {
+    "**/.dart_tool": true,
+    "**/.packages": true,
+    "**/.idea": true,
+    "**/.gradle": true,
+    "**/.vscode": false,
+    "**/.fvm": true,
+    "**/.mason": true,
+    "**/mason-lock.json": true,
+    "**/.flutter-plugins": true,
+    "**/.flutter-plugins-dependencies": true,
+    "**/.metadata": true
+  },
+  "search.exclude": {
+    "**/.dart_tool": true,
+    "**/.fvm": true,
+    "**/build": true,
+    "**/.mason": true,
+    "**/mason-lock.json": true,
+    "**/*.freezed.dart": true,
+    "**/*.g.dart": true,
+    "**/*.gr.dart": true,
+    "**/*.gen.dart": true,
+    "**/*.mocks.dart": true,
+    "**/generated": true,
+    "**/coverage": true,
+    "**/.flutter-plugins*": true
+  },
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "editor.quickSuggestions": {
+    "strings": true,
+    "comments": false,
+    "other": true
+  },
+  "editor.snippetSuggestions": "top",
+  "editor.suggest.localityBonus": true,
+  "editor.suggest.showStatusBar": true,
+  "editor.inlineSuggest.enabled": true,
+  "editor.bracketPairColorization.enabled": true,
+  "editor.guides.bracketPairs": true,
+  "editor.guides.bracketPairsHorizontal": "active",
+  "editor.minimap.enabled": true,
+  "editor.minimap.maxColumn": 80,
+  "editor.stickyScroll.enabled": true,
+  "editor.linkedEditing": true,
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "terminal.integrated.scrollback": 10000,
+  "git.autofetch": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true
+}

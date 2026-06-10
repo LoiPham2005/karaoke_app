@@ -1,0 +1,23 @@
+{
+    "ads": "Quảng cáo",
+    "appTitle": "Ứng dụng của tôi",
+    "full_name": "Họ và tên",
+    "hello": "Xin chào",
+    "name": "Tên",
+    "welcome": "Chào mừng {name}",
+    "@welcome": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    },
+    "settings": "Cài đặt",
+    "language": "Ngôn ngữ",
+    "appearance": "Giao diện",
+    "darkMode": "Chế độ tối",
+    "systemDefault": "Theo hệ thống",
+    "on": "Đang bật",
+    "off": "Đang tắt",
+    "primaryColor": "Màu chủ đạo"
+}
