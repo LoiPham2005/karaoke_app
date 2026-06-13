@@ -1,0 +1,58 @@
+import 'package:karaoke/shared/mocks/mock_songs.dart';
+import 'package:karaoke/shared/models/playlist_model.dart';
+
+final List<PlaylistModel> mockPlaylists = [
+  PlaylistModel(
+    id: 'pl-001',
+    name: 'Karaoke cuối tuần',
+    description: 'Tổng hợp những bài hay nhất để cuối tuần lên đồ',
+    coverUrl: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400',
+    isPublic: true,
+    songCount: 24,
+    totalDuration: 6840,
+    ownerName: 'Demo User',
+    songs: mockSongs.take(8).toList(),
+  ),
+  PlaylistModel(
+    id: 'pl-002',
+    name: 'Bolero kinh điển',
+    description: 'Những bài bolero không thể bỏ qua',
+    coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=400',
+    isPublic: true,
+    songCount: 18,
+    totalDuration: 5400,
+    ownerName: 'Demo User',
+    songs: mockSongs.where((s) => s.category == 'bolero').toList(),
+  ),
+  PlaylistModel(
+    id: 'pl-003',
+    name: 'US-UK Top Hits',
+    description: 'Top hits Mỹ Anh đình đám',
+    coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=400',
+    songCount: 32,
+    totalDuration: 8960,
+    ownerName: 'Demo User',
+    songs: mockSongs.where((s) => s.category == 'usuk').toList(),
+  ),
+  PlaylistModel(
+    id: 'pl-004',
+    name: 'Sơn Tùng M-TP',
+    description: 'Tất cả các bài của Sơn Tùng',
+    coverUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400',
+    isPublic: true,
+    songCount: 15,
+    totalDuration: 4200,
+    ownerName: 'Sky M-TP',
+    songs: mockSongs.where((s) => s.artist.contains('Sơn Tùng')).toList(),
+  ),
+  PlaylistModel(
+    id: 'pl-005',
+    name: 'Hát giải sầu 😢',
+    description: 'Khi buồn thì nghe',
+    coverUrl: 'https://images.unsplash.com/photo-1494232410401-ad00d5433cfa?w=400',
+    songCount: 12,
+    totalDuration: 3600,
+    ownerName: 'Demo User',
+    songs: mockSongs.take(5).toList(),
+  ),
+];

@@ -1,0 +1,23 @@
+{
+    "ads": "광고",
+    "appTitle": "내 앱",
+    "appearance": "모습",
+    "darkMode": "다크 모드",
+    "full_name": "성명",
+    "hello": "안녕하세요",
+    "language": "언어",
+    "name": "이름",
+    "off": "끄다",
+    "on": "~에",
+    "primaryColor": "원색",
+    "settings": "설정",
+    "systemDefault": "시스템 기본값",
+    "welcome": "환영합니다 {name}",
+    "@welcome": {
+        "placeholders": {
+            "name": {
+                "type": "String"
+            }
+        }
+    }
+}
