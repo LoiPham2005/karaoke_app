@@ -43,6 +43,6 @@ class AdLifecycleObserver extends WidgetsBindingObserver {
     if (last != null && now.difference(last) < _resumeDebounce) return;
     _lastResumeAt = now;
 
-    _adManager.showAppOpen(AppOpenPlacement.resume);
+    // _adManager.showAppOpen(AppOpenPlacement.resume);
   }
 }
