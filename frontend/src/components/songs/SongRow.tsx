@@ -31,7 +31,7 @@ export function SongRow({ song, index }: SongRowProps) {
           <Play className="h-4 w-4 text-white" />
         </div>
       </Link>
-      <Link href={`/song/${song.youtubeId}`} className="flex-1 min-w-0">
+      <Link href={`/play/${song.youtubeId}`} className="flex-1 min-w-0">
         <h4 className="text-sm font-medium truncate">{song.title}</h4>
         <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
       </Link>

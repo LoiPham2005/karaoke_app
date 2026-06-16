@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube';
 import {
   ArrowLeft,
   Play,
@@ -18,7 +20,6 @@ import {
   Repeat,
   Shuffle,
   Mic2,
-  Type,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
@@ -28,11 +29,20 @@ import { mockSongs } from '@/mocks/songs';
 import { mockLyrics } from '@/mocks/lyrics';
 import { cn, formatDuration } from '@/lib/utils';
 
-export default function PlayerPage({ params }: { params: { id: string } }) {
-  const song = mockSongs.find((s) => s.youtubeId === params.id) ?? mockSongs[0];
-  const queue = mockSongs.slice(1, 6);
+export default function PlayerPage() {
+  const params = useParams();
+  const videoId = String(params.id ?? '');
 
-  const [playing, setPlaying] = useState(true);
+  // Nếu bài nằm trong mock thì lấy metadata; nếu là id từ YouTube search thì
+  // metadata thật sẽ được lấy từ player.onReady (getVideoData).
+  const mock = mockSongs.find((s) => s.youtubeId === videoId);
+  const queue = mockSongs.filter((s) => s.youtubeId !== videoId).slice(0, 5);
+
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const [title, setTitle] = useState(mock?.title ?? 'Đang tải...');
+  const [author, setAuthor] = useState(mock?.artist ?? '');
+  const [duration, setDuration] = useState(mock?.duration ?? 0);
+  const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [volume, setVolume] = useState(80);
   const [muted, setMuted] = useState(false);
@@ -42,20 +52,74 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
   const [loop, setLoop] = useState(false);
   const [shuffle, setShuffle] = useState(false);
 
-  // Simulate playback
+  // Poll thời gian phát thật từ player → sync progress + lyrics highlight.
   useEffect(() => {
     if (!playing) return;
     const interval = setInterval(() => {
-      setCurrentTime((t) => {
-        if (t >= song.duration) {
-          setPlaying(false);
-          return 0;
-        }
-        return t + 0.1;
-      });
-    }, 100);
+      const t = playerRef.current?.getCurrentTime?.();
+      if (typeof t === 'number') setCurrentTime(t);
+    }, 250);
     return () => clearInterval(interval);
-  }, [playing, song.duration]);
+  }, [playing]);
+
+  const onReady = (e: YouTubeEvent) => {
+    playerRef.current = e.target;
+    try {
+      const d = e.target.getDuration();
+      if (d) setDuration(d);
+      const data = e.target.getVideoData();
+      if (data?.title) setTitle(data.title);
+      if (data?.author) setAuthor(data.author);
+      e.target.setVolume(volume);
+    } catch {
+      // ignore — player chưa sẵn sàng
+    }
+  };
+
+  const onStateChange = (e: YouTubeEvent) => {
+    // YT.PlayerState: 1 = playing, 2 = paused, 0 = ended
+    if (e.data === 1) setPlaying(true);
+    else if (e.data === 2) setPlaying(false);
+    else if (e.data === 0) {
+      if (loop) {
+        e.target.seekTo(0, true);
+        e.target.playVideo();
+      } else {
+        setPlaying(false);
+      }
+    }
+  };
+
+  const togglePlay = () => {
+    const p = playerRef.current;
+    if (!p) return;
+    if (playing) p.pauseVideo();
+    else p.playVideo();
+  };
+
+  const seek = (t: number) => {
+    setCurrentTime(t);
+    playerRef.current?.seekTo(t, true);
+  };
+
+  const changeVolume = (v: number) => {
+    setVolume(v);
+    setMuted(false);
+    playerRef.current?.unMute();
+    playerRef.current?.setVolume(v);
+  };
+
+  const toggleMute = () => {
+    const p = playerRef.current;
+    if (!p) return;
+    if (muted) {
+      p.unMute();
+      setMuted(false);
+    } else {
+      p.mute();
+      setMuted(true);
+    }
+  };
 
   return (
     <div className={cn('h-screen flex flex-col bg-background overflow-hidden', tvMode && 'tv-mode')}>
@@ -69,8 +133,8 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
               </Button>
             </Link>
             <div className="min-w-0">
-              <h2 className="text-sm font-semibold truncate">{song.title}</h2>
-              <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+              <h2 className="text-sm font-semibold truncate">{title}</h2>
+              <p className="text-xs text-muted-foreground truncate">{author}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -95,23 +159,36 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
       <div className="flex-1 flex min-h-0">
         {/* Left: Video + Lyrics */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Video area */}
-          <div className={cn('relative w-full bg-black shrink-0', tvMode ? 'h-1/2' : 'aspect-video max-h-[50vh]')}>
-            {/* YouTube iframe placeholder */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Image
-                src={song.thumbnailUrl}
-                alt={song.title}
-                fill
-                className="object-cover opacity-80"
+          {/* Video area — YouTube IFrame player thật */}
+          <div
+            className={cn(
+              'relative w-full bg-black shrink-0',
+              tvMode ? 'h-1/2' : 'aspect-video max-h-[50vh]',
+            )}
+          >
+            {videoId ? (
+              <YouTube
+                videoId={videoId}
+                onReady={onReady}
+                onStateChange={onStateChange}
+                className="absolute inset-0 h-full w-full"
+                iframeClassName="h-full w-full"
+                opts={{
+                  width: '100%',
+                  height: '100%',
+                  playerVars: {
+                    autoplay: 1,
+                    modestbranding: 1,
+                    rel: 0,
+                    playsinline: 1,
+                  },
+                }}
               />
-              <div className="absolute inset-0 bg-black/40" />
-              <div className="relative z-10 text-center text-white space-y-2">
-                <Mic2 className="h-16 w-16 mx-auto opacity-50" />
-                <p className="text-sm opacity-70">YouTube IFrame Player sẽ ở đây</p>
-                <p className="text-xs opacity-50">videoId: {song.youtubeId}</p>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-white/60">
+                Không có videoId
               </div>
-            </div>
+            )}
           </div>
 
           {/* Lyrics */}
@@ -119,7 +196,7 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
             <LyricsHighlight
               lyrics={mockLyrics}
               currentTime={currentTime}
-              onSeek={setCurrentTime}
+              onSeek={seek}
               fontSize={fontSize}
             />
             {/* Font size toggle */}
@@ -182,17 +259,17 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
           {/* Progress */}
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
-              {formatDuration(currentTime)}
+              {formatDuration(Math.floor(currentTime))}
             </span>
             <Slider
               value={[currentTime]}
-              onValueChange={(v) => setCurrentTime(v[0])}
-              max={song.duration}
-              step={0.1}
+              onValueChange={(v) => seek(v[0])}
+              max={duration || 1}
+              step={1}
               className="flex-1"
             />
             <span className="text-xs text-muted-foreground tabular-nums w-12">
-              {formatDuration(song.duration)}
+              {formatDuration(duration)}
             </span>
           </div>
 
@@ -219,7 +296,7 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
                 size="icon"
                 variant="gradient"
                 className="h-12 w-12 rounded-full"
-                onClick={() => setPlaying(!playing)}
+                onClick={togglePlay}
               >
                 {playing ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
               </Button>
@@ -237,15 +314,12 @@ export default function PlayerPage({ params }: { params: { id: string } }) {
                 <Repeat className="h-4 w-4" />
               </Button>
               <div className="hidden md:flex items-center gap-2">
-                <Button size="icon-sm" variant="ghost" onClick={() => setMuted(!muted)}>
+                <Button size="icon-sm" variant="ghost" onClick={toggleMute}>
                   {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                 </Button>
                 <Slider
                   value={[muted ? 0 : volume]}
-                  onValueChange={(v) => {
-                    setVolume(v[0]);
-                    setMuted(false);
-                  }}
+                  onValueChange={(v) => changeVolume(v[0])}
                   max={100}
                   className="w-24"
                 />

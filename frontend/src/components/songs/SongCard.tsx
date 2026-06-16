@@ -18,7 +18,7 @@ export function SongCard({ song, variant = 'default', showRank }: SongCardProps)
   if (variant === 'compact') {
     return (
       <Link
-        href={`/song/${song.youtubeId}`}
+        href={`/play/${song.youtubeId}`}
         className="flex items-center gap-3 p-2 rounded-xl hover:bg-accent transition-all group"
       >
         {showRank !== undefined && (

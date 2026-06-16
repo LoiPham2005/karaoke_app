@@ -17,8 +17,20 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    await this.$connect();
-    this.logger.log('✅ Prisma connected to database');
+    try {
+      await this.$connect();
+      this.logger.log('✅ Prisma connected to database');
+    } catch (e) {
+      // Prod: bắt buộc có DB → fail fast. Dev: cho app vẫn boot (Prisma sẽ
+      // connect lazy khi có query). Nhờ vậy có thể test các endpoint KHÔNG dùng
+      // DB (vd /songs/search gọi YouTube) mà chưa cần dựng Postgres.
+      if (process.env.NODE_ENV === 'production') throw e;
+      this.logger.warn(
+        `⚠️ Chưa kết nối được Postgres (${(e as Error).message}). ` +
+          'App vẫn chạy — endpoint dùng DB sẽ lỗi tới khi có DB. ' +
+          'Search YouTube KHÔNG cần DB nên test được ngay.',
+      );
+    }
   }
 
   async onModuleDestroy() {

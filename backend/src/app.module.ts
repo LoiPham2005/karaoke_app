@@ -8,6 +8,7 @@ import { AllExceptionsFilter } from './common/filters/http-exception.filter';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
+import { SongsModule } from './modules/songs/songs.module';
 
 @Module({
   imports: [
@@ -31,8 +32,9 @@ import { RedisModule } from './redis/redis.module';
     }),
     PrismaModule,
     RedisModule,
+    SongsModule,
     // TODO: Thêm các module nghiệp vụ ở các bước tiếp:
-    // AuthModule, UsersModule, SongsModule, LyricsModule,
+    // AuthModule, UsersModule, LyricsModule,
     // PlaylistsModule, QueueModule, FavoritesModule, HistoryModule,
     // ReportsModule, AdminModule
   ],

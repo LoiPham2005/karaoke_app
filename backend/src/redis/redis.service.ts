@@ -6,6 +6,7 @@ import Redis from 'ioredis';
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(RedisService.name);
   private client!: Redis;
+  private errorLogged = false;
 
   constructor(private readonly config: ConfigService) {}
 
@@ -14,12 +15,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       host: this.config.get<string>('redis.host'),
       port: this.config.get<number>('redis.port'),
       password: this.config.get<string>('redis.password') || undefined,
-      lazyConnect: false,
+      // KHÔNG connect lúc boot — chỉ connect khi có lệnh đầu tiên. Search không
+      // dùng Redis nên sẽ im lặng tới khi thật sự cần cache.
+      lazyConnect: true,
       maxRetriesPerRequest: 3,
+      enableOfflineQueue: false,
+      // Thử lại tối đa 5 lần rồi thôi (tránh spam log khi Redis chưa dựng ở dev).
+      retryStrategy: (times) => (times > 5 ? null : Math.min(times * 300, 3000)),
     });
 
-    this.client.on('connect', () => this.logger.log('✅ Redis connected'));
-    this.client.on('error', (err) => this.logger.error('Redis error', err));
+    this.client.on('connect', () => {
+      this.errorLogged = false;
+      this.logger.log('✅ Redis connected');
+    });
+    // Log lỗi 1 lần để khỏi spam (dev chưa có Redis vẫn chạy app, chỉ mất cache).
+    this.client.on('error', (err) => {
+      if (this.errorLogged) return;
+      this.errorLogged = true;
+      this.logger.warn(
+        `⚠️ Redis chưa kết nối được (${err.message}). App vẫn chạy — chỉ mất tính năng cache.`,
+      );
+    });
   }
 
   async onModuleDestroy() {

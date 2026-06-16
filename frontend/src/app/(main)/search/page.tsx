@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Search as SearchIcon, X, Clock, Filter, LayoutGrid, List } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SongCard } from '@/components/songs/SongCard';
 import { SongRow } from '@/components/songs/SongRow';
-import { mockSongs } from '@/mocks/songs';
-import { cn } from '@/lib/utils';
+import { searchSongs } from '@/lib/songs';
+import type { Song } from '@/types';
 
 const filters = ['Tất cả', 'Karaoke', 'Có lời', 'Không lời', 'Beat', 'Demo'];
 const recentSearches = ['Hoa nở không màu', 'Sơn Tùng', 'Bolero buồn', 'Despacito', 'See you again'];
@@ -18,7 +18,39 @@ export default function SearchPage() {
   const [filter, setFilter] = useState('Tất cả');
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
-  const results = query ? mockSongs : mockSongs;
+  const [results, setResults] = useState<Song[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Debounce 400ms rồi mới gọi YouTube (tránh gọi mỗi ký tự — tiết kiệm quota).
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setResults([]);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      searchSongs(q, 20, controller.signal)
+        .then((data) => setResults(data))
+        .catch((e: unknown) => {
+          if (controller.signal.aborted) return;
+          setError(e instanceof Error ? e.message : 'Tìm kiếm thất bại');
+          setResults([]);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setLoading(false);
+        });
+    }, 400);
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   return (
     <div className="container py-6 space-y-6">
@@ -99,6 +131,23 @@ export default function SearchPage() {
               </button>
             ))}
           </div>
+        </div>
+      ) : loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="aspect-video rounded-xl bg-card animate-pulse" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="py-16 text-center">
+          <p className="text-sm text-destructive">{error}</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Kiểm tra backend đã chạy (cổng 3000) và YOUTUBE_API_KEY.
+          </p>
+        </div>
+      ) : results.length === 0 ? (
+        <div className="py-16 text-center text-sm text-muted-foreground">
+          Không tìm thấy bài nào cho &quot;{query}&quot;
         </div>
       ) : (
         <div>
