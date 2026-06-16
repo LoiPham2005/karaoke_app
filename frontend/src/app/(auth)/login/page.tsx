@@ -22,6 +22,33 @@ export default function LoginPage() {
     }, 500);
   };
 
+  // 🧪 MOCK: bấm vai trò → "đăng nhập" thẳng vào màn của vai trò đó (chưa ghép API).
+  const MOCK_ROLES = [
+    { role: 'USER', icon: '🎤', label: 'Người dùng', desc: 'Vào app hát', path: '/home' },
+    {
+      role: 'MODERATOR',
+      icon: '🛡️',
+      label: 'Kiểm duyệt',
+      desc: 'Duyệt lyrics',
+      path: '/admin/lyrics',
+    },
+    { role: 'ADMIN', icon: '👑', label: 'Quản trị', desc: 'Trang admin', path: '/admin' },
+  ] as const;
+
+  const mockLogin = (role: string, path: string) => {
+    setIsLoading(true);
+    // Lưu role để các màn sau có thể đọc (mock) — sau này thay bằng auth thật.
+    try {
+      localStorage.setItem('mock_role', role);
+    } catch {
+      // ignore (SSR / storage bị chặn)
+    }
+    setTimeout(() => {
+      router.push(path);
+      setIsLoading(false);
+    }, 300);
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -103,6 +130,28 @@ export default function LoginPage() {
         </svg>
         Đăng nhập với Google
       </Button>
+
+      {/* 🧪 Đăng nhập nhanh theo vai trò (Dev mock) */}
+      <div className="space-y-3 rounded-xl border border-dashed border-border p-4">
+        <p className="text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          ⚡ Đăng nhập nhanh (Dev)
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {MOCK_ROLES.map((r) => (
+            <button
+              key={r.role}
+              type="button"
+              disabled={isLoading}
+              onClick={() => mockLogin(r.role, r.path)}
+              className="flex flex-col items-center gap-1 rounded-lg border border-border bg-card p-3 text-center transition hover:border-primary hover:bg-primary/5 disabled:opacity-50"
+            >
+              <span className="text-2xl leading-none">{r.icon}</span>
+              <span className="text-xs font-semibold">{r.label}</span>
+              <span className="text-[10px] text-muted-foreground">{r.desc}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
       <p className="text-center text-sm text-muted-foreground">
         Chưa có tài khoản?{' '}
