@@ -1,7 +1,0 @@
-flutter_native_splash:
-  color: "#ffffff"
-  image: assets/image/SprotHub_Logo.png
-  branding: assets/images/branding.png
-  android: true
-  ios: true
-  web: false

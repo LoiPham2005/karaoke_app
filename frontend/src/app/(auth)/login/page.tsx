@@ -23,16 +23,17 @@ export default function LoginPage() {
   };
 
   // 🧪 MOCK: bấm vai trò → "đăng nhập" thẳng vào màn của vai trò đó (chưa ghép API).
+  // App không có nội dung user (UGC) nên KHÔNG cần MODERATOR — chỉ 3 role.
   const MOCK_ROLES = [
     { role: 'USER', icon: '🎤', label: 'Người dùng', desc: 'Vào app hát', path: '/home' },
-    {
-      role: 'MODERATOR',
-      icon: '🛡️',
-      label: 'Kiểm duyệt',
-      desc: 'Duyệt lyrics',
-      path: '/admin/lyrics',
-    },
     { role: 'ADMIN', icon: '👑', label: 'Quản trị', desc: 'Trang admin', path: '/admin' },
+    {
+      role: 'SUPER_ADMIN',
+      icon: '⭐',
+      label: 'Chủ hệ thống',
+      desc: 'Toàn quyền',
+      path: '/admin',
+    },
   ] as const;
 
   const mockLogin = (role: string, path: string) => {

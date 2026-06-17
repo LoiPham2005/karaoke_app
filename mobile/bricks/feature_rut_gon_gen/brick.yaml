@@ -1,9 +1,0 @@
-name: feature_rut_gon_gen
-description: Một feature mẫu sử dụng Retrofit, Freezed và BaseCubit (Pattern Gen). Tự động sinh ra Model, Service, Cubit và Screen cơ bản.
-version: 0.1.0+1
-repository: https://github.com/LoiPham2005/flutter_base_template
-vars:
-  name:
-    type: string
-    description: Tên của feature (ví dụ product, category)
-    prompt: Nhập tên feature?

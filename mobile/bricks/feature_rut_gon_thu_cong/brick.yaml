@@ -1,9 +1,0 @@
-name: feature_rut_gon_thu_cong
-description: Một feature mẫu sử dụng ApiClient thủ công, không dùng code gen. Phù hợp cho các module đơn giản hoặc khi không muốn dùng build_runner.
-version: 0.1.0+1
-repository: https://github.com/LoiPham2005/flutter_base_template
-vars:
-  name:
-    type: string
-    description: Tên của feature (ví dụ product, category)
-    prompt: Nhập tên feature?
