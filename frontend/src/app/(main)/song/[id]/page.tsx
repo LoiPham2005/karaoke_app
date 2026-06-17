@@ -12,7 +12,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SongCard } from '@/components/songs/SongCard';
 import { mockSongs } from '@/mocks/songs';
 import { toSongRef } from '@/lib/library';
-import { useSong, useSimilar, useAddFavorite, useRemoveFavorite } from '@/lib/queries';
+import {
+  useSong,
+  useSimilar,
+  useAddFavorite,
+  useRemoveFavorite,
+  useAddToQueue,
+} from '@/lib/queries';
 import { useAuthStore } from '@/stores/auth.store';
 import { cn, formatDuration, formatNumber } from '@/lib/utils';
 
@@ -34,6 +40,18 @@ export default function SongDetailPage() {
 
   const addFav = useAddFavorite();
   const removeFav = useRemoveFavorite();
+  const addQueue = useAddToQueue();
+
+  const handleAddQueue = () => {
+    if (!user) {
+      toast('Đăng nhập để dùng hàng chờ');
+      return;
+    }
+    addQueue.mutate(toSongRef(song), {
+      onSuccess: () => toast('Đã thêm vào hàng chờ'),
+      onError: () => toast.error('Không thể thêm vào hàng chờ'),
+    });
+  };
 
   // Đồng bộ cờ yêu thích khi backend trả về (nếu có isFavorite).
   useEffect(() => {
@@ -113,7 +131,7 @@ export default function SongDetailPage() {
               Hát ngay
             </Button>
           </Link>
-          <Button size="lg" variant="outline">
+          <Button size="lg" variant="outline" onClick={handleAddQueue} disabled={addQueue.isPending}>
             <Plus className="mr-2 h-4 w-4" />
             Thêm vào queue
           </Button>
