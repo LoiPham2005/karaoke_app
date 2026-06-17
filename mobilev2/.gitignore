@@ -95,6 +95,7 @@ lib/**/*.g.dart
 lib/**/*.freezed.dart
 lib/**/*.config.dart
 lib/**/*.gr.dart
+lib/**/*.tailor.dart
 lib/gen/
 .tmp/
 
