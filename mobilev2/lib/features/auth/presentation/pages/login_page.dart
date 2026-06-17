@@ -1,24 +1,51 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:karaoke/core/base/riverpod/riverpod_listeners.dart';
 import 'package:karaoke/design/theme/styles/app_color_tokens.dart';
 import 'package:karaoke/design/theme/styles/app_dimensions.dart';
+import 'package:karaoke/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:karaoke/routes/config/app_router.dart';
 import 'package:karaoke/shared/widgets/karaoke_logo.dart';
 
 @RoutePage()
-class LoginPage extends StatefulWidget {
+class LoginPage extends HookConsumerWidget {
   const LoginPage({super.key});
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showPassword = useState(false);
+    final emailCtl = useTextEditingController();
+    final passwordCtl = useTextEditingController();
 
-class _LoginPageState extends State<LoginPage> {
-  bool _showPassword = false;
+    final state = ref.watch(authProvider);
+    final notifier = ref.read(authProvider.notifier);
+    final isLoading = state.isLoading;
 
-  @override
-  Widget build(BuildContext context) {
+    // Toast lỗi tự động khi state chuyển sang error.
+    useAsyncValueChange(state);
+
+    // Khi đăng nhập thành công (state có user != null) → vào main.
+    ref.listen(authProvider, (previous, next) {
+      if (next.value != null && (previous?.value == null)) {
+        context.router.replaceAll([const MainRoute()]);
+      }
+    });
+
+    Future<void> submit() async {
+      final email = emailCtl.text.trim();
+      final password = passwordCtl.text;
+      if (email.isEmpty || password.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng nhập email và mật khẩu')),
+        );
+        return;
+      }
+      await notifier.login(email: email, password: password);
+    }
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -47,25 +74,34 @@ class _LoginPageState extends State<LoginPage> {
               const _FieldLabel('Email'),
               SizedBox(height: 6.r),
               TextField(
+                controller: emailCtl,
                 keyboardType: TextInputType.emailAddress,
-                decoration: _decoration(context, 'ban@gmail.com', Icons.mail_outline),
+                decoration: _decoration(
+                  context,
+                  'ban@gmail.com',
+                  Icons.mail_outline,
+                ),
               ),
               SizedBox(height: 16.r),
 
               const _FieldLabel('Mật khẩu'),
               SizedBox(height: 6.r),
               TextField(
-                obscureText: !_showPassword,
+                controller: passwordCtl,
+                obscureText: !showPassword.value,
+                onSubmitted: (_) => submit(),
                 decoration: _decoration(
                   context,
                   '••••••••',
                   Icons.lock_outline,
                   suffix: IconButton(
                     icon: Icon(
-                      _showPassword ? Icons.visibility_off : Icons.visibility,
+                      showPassword.value
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                       color: context.textSub,
                     ),
-                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                    onPressed: () => showPassword.value = !showPassword.value,
                   ),
                 ),
               ),
@@ -74,7 +110,8 @@ class _LoginPageState extends State<LoginPage> {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton(
-                  onPressed: () => context.router.push(const ForgotPasswordRoute()),
+                  onPressed: () =>
+                      context.router.push(const ForgotPasswordRoute()),
                   child: Text(
                     'Quên mật khẩu?',
                     style: TextStyle(
@@ -90,7 +127,7 @@ class _LoginPageState extends State<LoginPage> {
                 width: double.infinity,
                 height: 52.r,
                 child: ElevatedButton(
-                  onPressed: () => context.router.replaceAll([const MainRoute()]),
+                  onPressed: isLoading ? null : submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: context.brandPrimary,
                     foregroundColor: Colors.white,
@@ -98,10 +135,22 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(AppDimensions.radius),
                     ),
                   ),
-                  child: Text(
-                    'Đăng nhập',
-                    style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
-                  ),
+                  child: isLoading
+                      ? SizedBox(
+                          width: 22.r,
+                          height: 22.r,
+                          child: const CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Đăng nhập',
+                          style: TextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                 ),
               ),
               SizedBox(height: 24.r),
@@ -125,7 +174,8 @@ class _LoginPageState extends State<LoginPage> {
                 width: double.infinity,
                 height: 52.r,
                 child: OutlinedButton.icon(
-                  onPressed: () => context.router.replaceAll([const MainRoute()]),
+                  onPressed: () =>
+                      context.router.replaceAll([const MainRoute()]),
                   icon: Container(
                     width: 20.r,
                     height: 20.r,
@@ -133,7 +183,11 @@ class _LoginPageState extends State<LoginPage> {
                       shape: BoxShape.circle,
                       color: Color(0xFFDB4437),
                     ),
-                    child: const Icon(Icons.g_mobiledata, color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.g_mobiledata,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                   label: Text(
                     'Đăng nhập với Google',

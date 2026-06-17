@@ -1,36 +1,67 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Filter, MoreVertical, Crown, Shield, Ban } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Search, Crown, Shield, Ban, RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAdminUsers, useUpdateAdminUser } from '@/lib/queries';
 
-const mockAdminUsers = Array.from({ length: 15 }, (_, i) => ({
-  id: `user-${i + 1}`,
-  name: `Nguyễn Văn ${String.fromCharCode(65 + i)}`,
-  email: `user${i + 1}@gmail.com`,
-  avatar: `https://i.pravatar.cc/200?img=${i + 1}`,
-  role: i === 0 ? 'ADMIN' : i < 3 ? 'MODERATOR' : 'USER',
-  premium: i % 4 === 0,
-  status: i % 7 === 0 ? 'BANNED' : 'ACTIVE',
-  lastActive: `${i + 1} giờ trước`,
-  createdAt: `2025-${String((i % 12) + 1).padStart(2, '0')}-15`,
-}));
+const ROLE_FILTERS = ['', 'USER', 'STAFF', 'OWNER', 'ADMIN', 'SUPER_ADMIN'];
+const ROLE_LABEL: Record<string, string> = {
+  '': 'Tất cả',
+  USER: 'User',
+  STAFF: 'Staff',
+  OWNER: 'Owner',
+  ADMIN: 'Admin',
+  SUPER_ADMIN: 'Super Admin',
+};
 
 export default function AdminUsersPage() {
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('all');
+  const [debounced, setDebounced] = useState('');
+  const [role, setRole] = useState('');
+
+  // Debounce ô tìm kiếm 400ms.
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(query.trim()), 400);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const { data, isLoading } = useAdminUsers(debounced, role);
+  const updateUser = useUpdateAdminUser();
+  const users = data?.items ?? [];
+
+  const toggleBan = (id: string, status: string) => {
+    const next = status === 'BANNED' ? 'ACTIVE' : 'BANNED';
+    updateUser.mutate(
+      { id, status: next },
+      {
+        onSuccess: () => toast.success(next === 'BANNED' ? 'Đã khoá' : 'Đã mở khoá'),
+        onError: () => toast.error('Không cập nhật được'),
+      },
+    );
+  };
+
+  const changeRole = (id: string, role: string) => {
+    updateUser.mutate(
+      { id, role },
+      {
+        onSuccess: () => toast.success('Đã đổi vai trò'),
+        onError: () => toast.error('Không cập nhật được'),
+      },
+    );
+  };
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Quản lý người dùng</h1>
-          <p className="text-muted-foreground mt-1">12,847 người dùng tổng</p>
+          <p className="text-muted-foreground mt-1">{data?.total ?? 0} người dùng</p>
         </div>
-        <Button variant="gradient">Export CSV</Button>
       </div>
 
       {/* Filters */}
@@ -40,88 +71,85 @@ export default function AdminUsersPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Tìm theo tên, email..."
+            placeholder="Tìm theo email / tên..."
             className="pl-10"
           />
         </div>
-        <div className="flex items-center gap-2">
-          {['all', 'admin', 'mod', 'user', 'premium', 'banned'].map((f) => (
+        <div className="flex gap-2 overflow-x-auto">
+          {ROLE_FILTERS.map((r) => (
             <Badge
-              key={f}
-              variant={filter === f ? 'default' : 'outline'}
-              className="cursor-pointer px-3 py-1.5 capitalize"
-              onClick={() => setFilter(f)}
+              key={r || 'all'}
+              variant={role === r ? 'default' : 'outline'}
+              className="cursor-pointer px-3 py-1.5 text-sm shrink-0"
+              onClick={() => setRole(r)}
             >
-              {f}
+              {ROLE_LABEL[r]}
             </Badge>
           ))}
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-card rounded-2xl overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="text-left text-xs text-muted-foreground uppercase tracking-wider border-b border-border">
-              <th className="px-6 py-4">Người dùng</th>
-              <th className="px-6 py-4 hidden md:table-cell">Role</th>
-              <th className="px-6 py-4 hidden md:table-cell">Status</th>
-              <th className="px-6 py-4 hidden lg:table-cell">Hoạt động</th>
-              <th className="px-6 py-4 hidden lg:table-cell">Tham gia</th>
-              <th className="px-6 py-4"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {mockAdminUsers.map((u) => (
-              <tr key={u.id} className="border-b border-border last:border-0 hover:bg-accent/50 transition-colors">
-                <td className="px-6 py-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={u.avatar} />
-                      <AvatarFallback>{u.name[0]}</AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium flex items-center gap-1">
-                        {u.name}
-                        {u.premium && <Crown className="h-3 w-3 text-amber-400" />}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{u.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-3 hidden md:table-cell">
-                  <Badge
-                    variant={u.role === 'ADMIN' ? 'default' : u.role === 'MODERATOR' ? 'secondary' : 'outline'}
-                  >
-                    {u.role === 'ADMIN' && <Shield className="h-3 w-3 mr-1" />}
-                    {u.role}
-                  </Badge>
-                </td>
-                <td className="px-6 py-3 hidden md:table-cell">
-                  {u.status === 'BANNED' ? (
-                    <Badge variant="destructive">
-                      <Ban className="h-3 w-3 mr-1" />
-                      Banned
-                    </Badge>
-                  ) : (
-                    <Badge variant="success">Active</Badge>
-                  )}
-                </td>
-                <td className="px-6 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                  {u.lastActive}
-                </td>
-                <td className="px-6 py-3 hidden lg:table-cell text-sm text-muted-foreground">
-                  {u.createdAt}
-                </td>
-                <td className="px-6 py-3 text-right">
-                  <Button size="icon-sm" variant="ghost">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* List */}
+      <div className="bg-card rounded-2xl divide-y divide-border">
+        {isLoading ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">Đang tải...</div>
+        ) : users.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">
+            Không có người dùng
+          </div>
+        ) : (
+          users.map((u) => (
+            <div key={u.id} className="flex items-center gap-3 p-3">
+              <Avatar className="h-10 w-10">
+                {u.avatarUrl && <AvatarImage src={u.avatarUrl} alt={u.displayName} />}
+                <AvatarFallback>{u.displayName.charAt(0).toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium truncate">{u.displayName}</p>
+                  {u.isPremium && <Crown className="h-3.5 w-3.5 text-amber-400 shrink-0" />}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+              </div>
+
+              <Badge variant="outline" className="hidden sm:inline-flex shrink-0">
+                <Shield className="h-3 w-3 mr-1" />
+                {ROLE_LABEL[u.role] ?? u.role}
+              </Badge>
+              {u.status === 'BANNED' && (
+                <Badge variant="destructive" className="shrink-0">
+                  Đã khoá
+                </Badge>
+              )}
+
+              {/* Đổi role nhanh */}
+              <select
+                value={u.role}
+                onChange={(e) => changeRole(u.id, e.target.value)}
+                className="hidden md:block rounded-lg border border-border bg-background px-2 py-1 text-xs"
+              >
+                {['USER', 'STAFF', 'OWNER', 'ADMIN', 'SUPER_ADMIN'].map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
+              </select>
+
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => toggleBan(u.id, u.status)}
+                title={u.status === 'BANNED' ? 'Mở khoá' : 'Khoá'}
+              >
+                {u.status === 'BANNED' ? (
+                  <RotateCcw className="h-4 w-4 text-emerald-400" />
+                ) : (
+                  <Ban className="h-4 w-4 text-red-400" />
+                )}
+              </Button>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

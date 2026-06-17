@@ -1,11 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Play, Heart, MoreVertical, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { Song } from '@/types';
-import { formatDuration, formatNumber } from '@/lib/utils';
+import { cn, formatDuration, formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { addFavorite, removeFavorite, toSongRef } from '@/lib/library';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface SongRowProps {
   song: Song;
@@ -13,6 +17,35 @@ interface SongRowProps {
 }
 
 export function SongRow({ song, index }: SongRowProps) {
+  const user = useAuthStore((s) => s.user);
+  const [isFav, setIsFav] = useState(Boolean(song.isFavorite));
+
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast('Đăng nhập để lưu yêu thích');
+      return;
+    }
+    if (isFav) {
+      setIsFav(false);
+      removeFavorite(song.youtubeId)
+        .then(() => toast('Đã xóa khỏi yêu thích'))
+        .catch(() => {
+          setIsFav(true);
+          toast.error('Không thể cập nhật yêu thích');
+        });
+    } else {
+      setIsFav(true);
+      addFavorite(toSongRef(song))
+        .then(() => toast('Đã thêm vào yêu thích'))
+        .catch(() => {
+          setIsFav(false);
+          toast.error('Không thể cập nhật yêu thích');
+        });
+    }
+  };
+
   return (
     <div className="group flex items-center gap-4 px-4 py-2 rounded-xl hover:bg-accent transition-all">
       {index !== undefined && (
@@ -45,8 +78,8 @@ export function SongRow({ song, index }: SongRowProps) {
         <Button size="icon-sm" variant="ghost">
           <Plus className="h-4 w-4" />
         </Button>
-        <Button size="icon-sm" variant="ghost">
-          <Heart className="h-4 w-4" />
+        <Button size="icon-sm" variant="ghost" onClick={toggleFavorite}>
+          <Heart className={cn('h-4 w-4', isFav && 'fill-current text-primary')} />
         </Button>
         <Button size="icon-sm" variant="ghost">
           <MoreVertical className="h-4 w-4" />

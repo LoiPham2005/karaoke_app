@@ -134,29 +134,6 @@ class SongModel with _$SongModel {
 
 ---
 
-## 5. ROUTES (typed go_router)
-
-Update [routes/config/route_names.dart](mobile/lib/routes/config/route_names.dart):
-```dart
-class RouteNames {
-  static const splash = '/splash';
-  static const onboarding = '/onboarding';
-  static const login = '/login';
-  static const register = '/register';
-  static const forgotPassword = '/forgot-password';
-  static const home = '/home';
-  static const search = '/search';
-  static const library = '/library';
-  static const profile = '/profile';
-  static const songDetail = '/song/:id';
-  static const player = '/play/:id';
-  static const playlistDetail = '/playlist/:id';
-  static const queue = '/queue';
-  static const category = '/category/:slug';
-  static const settings = '/settings';
-  static const premium = '/premium';
-}
-```
 
 ---
 

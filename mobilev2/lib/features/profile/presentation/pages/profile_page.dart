@@ -1,16 +1,18 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:karaoke/design/theme/styles/app_color_tokens.dart';
 import 'package:karaoke/design/theme/styles/app_dimensions.dart';
+import 'package:karaoke/features/auth/presentation/providers/auth_notifier.dart';
 import 'package:karaoke/routes/config/app_router.dart';
 import 'package:karaoke/shared/mocks/mock_user.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = mockUser;
     return Scaffold(
       backgroundColor: context.bgPage,
@@ -123,12 +125,12 @@ class ProfilePage extends StatelessWidget {
             _MenuTile(
               icon: Icons.history,
               title: 'Lịch sử hát',
-              onTap: () {},
+              onTap: () => context.router.push(const HistoryRoute()),
             ),
             _MenuTile(
               icon: Icons.favorite_border,
               title: 'Yêu thích',
-              onTap: () {},
+              onTap: () => context.router.push(const FavoritesRoute()),
             ),
             _MenuTile(
               icon: Icons.settings_outlined,
@@ -145,12 +147,43 @@ class ProfilePage extends StatelessWidget {
               iconColor: Colors.red,
               title: 'Đăng xuất',
               titleColor: Colors.red,
-              onTap: () => context.router.replaceAll([const LoginRoute()]),
+              onTap: () => _confirmLogout(context, ref),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Xác nhận → đăng xuất (revoke refresh token + xoá token local) → về login.
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: dialogCtx.bgCard,
+        title: Text('Đăng xuất', style: TextStyle(color: dialogCtx.textTitle)),
+        content: Text(
+          'Bạn chắc chắn muốn đăng xuất?',
+          style: TextStyle(color: dialogCtx.textBody),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Huỷ'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            child: const Text('Đăng xuất',
+                style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await ref.read(authProvider.notifier).logout();
+    if (context.mounted) {
+      await context.router.replaceAll([const LoginRoute()]);
+    }
   }
 }
 

@@ -1,12 +1,16 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Play, Heart, MoreVertical } from 'lucide-react';
+import { toast } from 'sonner';
 import { Song } from '@/types';
-import { formatDuration, formatNumber } from '@/lib/utils';
+import { cn, formatDuration, formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { addFavorite, removeFavorite, toSongRef } from '@/lib/library';
+import { useAuthStore } from '@/stores/auth.store';
 
 interface SongCardProps {
   song: Song;
@@ -15,6 +19,35 @@ interface SongCardProps {
 }
 
 export function SongCard({ song, variant = 'default', showRank }: SongCardProps) {
+  const user = useAuthStore((s) => s.user);
+  const [isFav, setIsFav] = useState(Boolean(song.isFavorite));
+
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast('Đăng nhập để lưu yêu thích');
+      return;
+    }
+    if (isFav) {
+      setIsFav(false);
+      removeFavorite(song.youtubeId)
+        .then(() => toast('Đã xóa khỏi yêu thích'))
+        .catch(() => {
+          setIsFav(true);
+          toast.error('Không thể cập nhật yêu thích');
+        });
+    } else {
+      setIsFav(true);
+      addFavorite(toSongRef(song))
+        .then(() => toast('Đã thêm vào yêu thích'))
+        .catch(() => {
+          setIsFav(false);
+          toast.error('Không thể cập nhật yêu thích');
+        });
+    }
+  };
+
   if (variant === 'compact') {
     return (
       <Link
@@ -72,14 +105,8 @@ export function SongCard({ song, variant = 'default', showRank }: SongCardProps)
             {formatNumber(song.viewCount)} lượt xem
           </span>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              onClick={(e) => {
-                e.preventDefault();
-              }}
-            >
-              <Heart className="h-3.5 w-3.5" />
+            <Button size="icon-sm" variant="ghost" onClick={toggleFavorite}>
+              <Heart className={cn('h-3.5 w-3.5', isFav && 'fill-current text-primary')} />
             </Button>
             <Button
               size="icon-sm"

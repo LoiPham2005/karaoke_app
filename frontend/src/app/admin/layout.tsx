@@ -1,14 +1,13 @@
 import Link from 'next/link';
-import { LayoutDashboard, Users, Flag, FileText, Music2, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Flag, FileText, LogOut } from 'lucide-react';
 import { Logo } from '@/components/common/Logo';
+import { AdminGuard } from '@/components/admin/AdminGuard';
 
 const nav = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Người dùng', icon: Users },
   { href: '/admin/reports', label: 'Báo cáo', icon: Flag },
   { href: '/admin/lyrics', label: 'Lyrics đóng góp', icon: FileText },
-  { href: '/admin/songs', label: 'Bài hát', icon: Music2 },
-  { href: '/admin/settings', label: 'Cài đặt', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -41,7 +40,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
         </div>
       </aside>
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <AdminGuard>{children}</AdminGuard>
+      </main>
     </div>
   );
 }

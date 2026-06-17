@@ -31,6 +31,10 @@ mixin BaseNotifier<T> on $AsyncNotifier<T> {
   Failure? _lastFailure;
   String? _pendingSuccess;
 
+  // Tăng mỗi lần runAsync chạy. Dùng để nhận biết một call đã bị call mới hơn
+  // thay thế (do cancelPrevious) → call cũ bỏ qua kết quả/lỗi, không đụng state.
+  int _generation = 0;
+
   Failure? get lastFailure => _lastFailure;
   String? get pendingSuccessMessage => _pendingSuccess;
 
@@ -48,6 +52,7 @@ mixin BaseNotifier<T> on $AsyncNotifier<T> {
     void Function(Object error, StackTrace stackTrace)? onError,
   }) async {
     if (cancelPrevious) await _current?.cancel();
+    final gen = ++_generation;
     _lastFailure = null;
     _pendingSuccess = null;
 
@@ -64,7 +69,8 @@ mixin BaseNotifier<T> on $AsyncNotifier<T> {
       final data = await _current!.value;
       // Notifier có thể đã bị dispose trong lúc await (user navigate away,
       // provider invalidate). Bỏ qua nếu vậy để tránh UnmountedRefException.
-      if (!ref.mounted) return;
+      // gen != _generation → call này đã bị call mới hơn thay thế → bỏ qua.
+      if (!ref.mounted || gen != _generation) return;
       if (emitEmptyForEmptyList && data is List && data.isEmpty) {
         _empty = true;
       } else {
@@ -73,7 +79,9 @@ mixin BaseNotifier<T> on $AsyncNotifier<T> {
       if (successMessage != null) _pendingSuccess = successMessage;
       state = AsyncValue<T>.data(data);
     } catch (e, s) {
-      if (!ref.mounted) return;
+      // Bị dispose hoặc đã bị call mới hơn thay thế (vd cancelPrevious khi gõ
+      // search nhanh → "Operation canceled") → bỏ qua, KHÔNG coi là lỗi thật.
+      if (!ref.mounted || gen != _generation) return;
       final failure = ErrorHandler.handle(e);
       _lastFailure = failure;
       Logger.error('runAsync failed', error: e, stackTrace: s);

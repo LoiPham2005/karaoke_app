@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:karaoke/core/base/di/injection.dart';
+import 'package:karaoke/core/data/storage/secure_storage_service.dart';
 import 'package:karaoke/design/theme/styles/app_color_tokens.dart';
 import 'package:karaoke/routes/config/app_router.dart';
 import 'package:karaoke/shared/widgets/karaoke_logo.dart';
@@ -17,10 +21,23 @@ class _SplashPageState extends State<SplashPage> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      context.router.replaceAll([const OnboardingRoute()]);
-    });
+    unawaited(_decideNextRoute());
+  }
+
+  /// Đã đăng nhập (có `access_token`) → vào thẳng MainRoute, bỏ qua onboarding/login.
+  /// Chưa đăng nhập → Onboarding như cũ. Giữ splash tối thiểu ~1.5s cho mượt.
+  Future<void> _decideNextRoute() async {
+    final storage = getIt<SecureStorageService>();
+    final results = await Future.wait([
+      storage.read('access_token'),
+      Future<void>.delayed(const Duration(milliseconds: 1500)),
+    ]);
+    if (!mounted) return;
+    final token = results.first as String?;
+    final loggedIn = token != null && token.isNotEmpty;
+    await context.router.replaceAll([
+      if (loggedIn) const MainRoute() else const OnboardingRoute(),
+    ]);
   }
 
   @override

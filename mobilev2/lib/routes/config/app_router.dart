@@ -5,6 +5,8 @@ import 'package:karaoke/features/auth/presentation/pages/forgot_password_page.da
 import 'package:karaoke/features/auth/presentation/pages/login_page.dart';
 import 'package:karaoke/features/auth/presentation/pages/register_page.dart';
 import 'package:karaoke/features/category/presentation/pages/category_page.dart';
+import 'package:karaoke/features/favorites/presentation/pages/favorites_page.dart';
+import 'package:karaoke/features/history/presentation/pages/history_page.dart';
 import 'package:karaoke/features/main/presentation/pages/main_page.dart';
 import 'package:karaoke/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:karaoke/features/player/presentation/pages/player_page.dart';
@@ -41,6 +43,8 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: PlayerRoute.page, path: '/play/:id'),
     AutoRoute(page: PlaylistDetailRoute.page, path: '/playlist/:id'),
     AutoRoute(page: QueueRoute.page, path: '/queue'),
+    AutoRoute(page: FavoritesRoute.page, path: '/favorites'),
+    AutoRoute(page: HistoryRoute.page, path: '/history'),
     AutoRoute(page: CategoryRoute.page, path: '/category/:slug'),
 
     // ── Settings & Premium ────────────────────────────────────

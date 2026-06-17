@@ -1,17 +1,70 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Play, Plus, Heart, Share2, Flag, Eye, Clock, Music } from 'lucide-react';
+import { Play, Plus, Heart, Share2, Flag, Eye, Clock } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SongCard } from '@/components/songs/SongCard';
 import { mockSongs } from '@/mocks/songs';
-import { mockLyrics } from '@/mocks/lyrics';
-import { formatDuration, formatNumber } from '@/lib/utils';
+import { toSongRef } from '@/lib/library';
+import { useSong, useSimilar, useAddFavorite, useRemoveFavorite } from '@/lib/queries';
+import { useAuthStore } from '@/stores/auth.store';
+import { cn, formatDuration, formatNumber } from '@/lib/utils';
 
-export default function SongDetailPage({ params }: { params: { id: string } }) {
-  const song = mockSongs.find((s) => s.youtubeId === params.id) ?? mockSongs[0];
-  const similar = mockSongs.filter((s) => s.category === song.category && s.youtubeId !== song.youtubeId).slice(0, 8);
+export default function SongDetailPage() {
+  const params = useParams();
+  const id = String(params.id ?? '');
+  const user = useAuthStore((s) => s.user);
+
+  // Song qua TanStack Query; fallback mock để UI không nhảy lúc đang tải.
+  const mockFallback = mockSongs.find((s) => s.youtubeId === id) ?? mockSongs[0];
+  const { data: fetchedSong } = useSong(id);
+  const song = fetchedSong ?? mockFallback;
+
+  // Bài tương tự thật (search theo nghệ sĩ).
+  const { data: similar = [], isLoading: similarLoading } = useSimilar(id);
+  const similarLoaded = !similarLoading;
+
+  const [isFav, setIsFav] = useState(false);
+
+  const addFav = useAddFavorite();
+  const removeFav = useRemoveFavorite();
+
+  // Đồng bộ cờ yêu thích khi backend trả về (nếu có isFavorite).
+  useEffect(() => {
+    if (fetchedSong) setIsFav(Boolean(fetchedSong.isFavorite));
+  }, [fetchedSong]);
+
+  const toggleFavorite = () => {
+    if (!user) {
+      toast('Đăng nhập để lưu yêu thích');
+      return;
+    }
+    if (isFav) {
+      setIsFav(false);
+      removeFav.mutate(song.youtubeId, {
+        onSuccess: () => toast('Đã xóa khỏi yêu thích'),
+        onError: () => {
+          setIsFav(true);
+          toast.error('Không thể cập nhật yêu thích');
+        },
+      });
+    } else {
+      setIsFav(true);
+      addFav.mutate(toSongRef(song), {
+        onSuccess: () => toast('Đã thêm vào yêu thích'),
+        onError: () => {
+          setIsFav(false);
+          toast.error('Không thể cập nhật yêu thích');
+        },
+      });
+    }
+  };
 
   return (
     <div className="relative">
@@ -64,8 +117,8 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
             <Plus className="mr-2 h-4 w-4" />
             Thêm vào queue
           </Button>
-          <Button size="icon" variant="ghost">
-            <Heart className="h-5 w-5" />
+          <Button size="icon" variant="ghost" onClick={toggleFavorite}>
+            <Heart className={cn('h-5 w-5', isFav && 'fill-current text-primary')} />
           </Button>
           <Button size="icon" variant="ghost">
             <Share2 className="h-5 w-5" />
@@ -75,32 +128,12 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
           </Button>
         </div>
 
-        {/* Tabs */}
-        <Tabs defaultValue="lyrics">
+        {/* Tabs — tab "Lời bài hát" tạm ẩn (lyrics chưa chuẩn) */}
+        <Tabs defaultValue="info">
           <TabsList>
-            <TabsTrigger value="lyrics">Lời bài hát</TabsTrigger>
             <TabsTrigger value="info">Thông tin</TabsTrigger>
             <TabsTrigger value="similar">Bài tương tự</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="lyrics" className="space-y-4">
-            <div className="bg-card rounded-2xl p-8">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Music className="h-5 w-5 text-primary" />
-                Lời bài hát
-              </h3>
-              <div className="space-y-2 text-base">
-                {mockLyrics.slice(0, 12).map((line, idx) => (
-                  <p key={idx} className="text-muted-foreground hover:text-foreground transition-colors">
-                    {line.text}
-                  </p>
-                ))}
-              </div>
-              <Button variant="link" className="mt-4 p-0">
-                Xem lời đầy đủ →
-              </Button>
-            </div>
-          </TabsContent>
 
           <TabsContent value="info">
             <div className="bg-card rounded-2xl p-8 space-y-3">
@@ -115,11 +148,19 @@ export default function SongDetailPage({ params }: { params: { id: string } }) {
           </TabsContent>
 
           <TabsContent value="similar">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {similar.map((s) => (
-                <SongCard key={s.youtubeId} song={s} />
-              ))}
-            </div>
+            {similar.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {similar.map((s) => (
+                  <SongCard key={s.youtubeId} song={s} />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-card rounded-2xl p-8 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {similarLoaded ? 'Chưa có bài tương tự' : 'Đang tải bài tương tự...'}
+                </p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>

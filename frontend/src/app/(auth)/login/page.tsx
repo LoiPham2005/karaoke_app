@@ -6,20 +6,31 @@ import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth.store';
 
 export default function LoginPage() {
   const router = useRouter();
+  const loginAction = useAuthStore((s) => s.login);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate login delay
-    setTimeout(() => {
-      router.push('/home');
+    try {
+      const user = await loginAction(email.trim(), password);
+      toast.success(`Chào ${user.displayName}!`);
+      // Admin/Super admin → vào trang quản trị; còn lại vào app người dùng.
+      const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
+      router.push(isAdmin ? '/admin' : '/home');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Đăng nhập thất bại');
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   // 🧪 MOCK: bấm vai trò → "đăng nhập" thẳng vào màn của vai trò đó (chưa ghép API).
@@ -62,7 +73,14 @@ export default function LoginPage() {
           <label className="text-sm font-medium">Email</label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input type="email" placeholder="ban@gmail.com" className="pl-10" required />
+            <Input
+              type="email"
+              placeholder="ban@gmail.com"
+              className="pl-10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
         </div>
 
@@ -79,6 +97,8 @@ export default function LoginPage() {
               type={showPassword ? 'text' : 'password'}
               placeholder="••••••••"
               className="pl-10 pr-10"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
             <button

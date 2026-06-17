@@ -53,30 +53,37 @@ class FlavorConfig {
 
   static void setFlavor(AppFlavor flavor) {
     _instance = switch (flavor) {
+      // ⚠️ DEV backend thật. Base URL đã gồm `/api/v1`, service path là
+      // `/auth/login` → request đầy đủ: `<base>/auth/login`.
+      //
+      // `10.0.2.2` = alias Android emulator trỏ về `localhost` của máy host.
+      // 👉 Máy thật / iOS simulator KHÔNG hiểu `10.0.2.2`. Đổi thành LAN IP
+      //    của máy chạy backend, ví dụ: 'http://192.168.1.10:3001/api/v1'
+      //    (xem IP bằng `ipconfig getifaddr en0` trên macOS).
       AppFlavor.dev => const FlavorConfig._(
-          flavor: AppFlavor.dev,
-          apiBaseUrl: 'https://api-dev.example.com',
-          appName: 'AppDev',
-          enableLogging: true,
-          enableCrashlytics: false,
-          enableAnalytics: false,
-        ),
+        flavor: AppFlavor.dev,
+        apiBaseUrl: 'http://192.168.1.101:3001/api/v1',
+        appName: 'AppDev',
+        enableLogging: true,
+        enableCrashlytics: false,
+        enableAnalytics: false,
+      ),
       AppFlavor.stg => const FlavorConfig._(
-          flavor: AppFlavor.stg,
-          apiBaseUrl: 'https://api-stg.example.com',
-          appName: 'AppStg',
-          enableLogging: true,
-          enableCrashlytics: true,
-          enableAnalytics: true,
-        ),
+        flavor: AppFlavor.stg,
+        apiBaseUrl: 'https://api-stg.example.com',
+        appName: 'AppStg',
+        enableLogging: true,
+        enableCrashlytics: true,
+        enableAnalytics: true,
+      ),
       AppFlavor.prod => const FlavorConfig._(
-          flavor: AppFlavor.prod,
-          apiBaseUrl: 'https://api.example.com',
-          appName: 'App',
-          enableLogging: false,
-          enableCrashlytics: true,
-          enableAnalytics: true,
-        ),
+        flavor: AppFlavor.prod,
+        apiBaseUrl: 'https://api.example.com',
+        appName: 'App',
+        enableLogging: false,
+        enableCrashlytics: true,
+        enableAnalytics: true,
+      ),
     };
   }
 }

@@ -119,6 +119,63 @@ export class YoutubeService {
     }
   }
 
+  /// Chi tiết 1 video theo id → SongResult (giống item của search). null nếu
+  /// id không tồn tại / bị gỡ. Chỉ tốn 1 quota unit (videos.list).
+  async getById(id: string): Promise<SongResult | null> {
+    const key = this.apiKey;
+    try {
+      const res = await axios.get(`${YT_BASE}/videos`, {
+        params: {
+          key,
+          id,
+          part: 'snippet,contentDetails,statistics',
+        },
+        timeout: 10000,
+      });
+
+      const item = (res.data.items ?? [])[0];
+      if (!item) return null;
+
+      const sn = item.snippet ?? {};
+      const title = this.decodeHtml(sn.title ?? '');
+      const isKaraoke = /karaoke|beat|nhạc nền|instrumental/i.test(title);
+      return {
+        youtubeId: item.id,
+        title,
+        artist: this.decodeHtml(sn.channelTitle ?? ''),
+        thumbnailUrl:
+          sn.thumbnails?.high?.url ??
+          sn.thumbnails?.medium?.url ??
+          sn.thumbnails?.default?.url ??
+          '',
+        duration: this.parseDuration(item.contentDetails?.duration ?? ''),
+        viewCount: parseInt(item.statistics?.viewCount ?? '0', 10),
+        hasLyrics: false,
+        isKaraoke,
+        category: isKaraoke ? 'karaoke' : 'music',
+      } satisfies SongResult;
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      const status = axios.isAxiosError(err) ? err.response?.status : undefined;
+      const reason =
+        axios.isAxiosError(err) &&
+        err.response?.data?.error?.errors?.[0]?.reason;
+      this.logger.error(
+        `YouTube getById failed (status=${status}, reason=${reason}): ${err}`,
+      );
+      if (reason === 'quotaExceeded') {
+        throw new HttpException(
+          'Đã hết quota YouTube API hôm nay',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      throw new HttpException(
+        'Không gọi được YouTube API',
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+  }
+
   /// ISO-8601 "PT#H#M#S" → tổng số giây.
   private parseDuration(iso: string): number {
     const m = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);

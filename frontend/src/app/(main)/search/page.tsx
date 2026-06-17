@@ -7,50 +7,46 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SongCard } from '@/components/songs/SongCard';
 import { SongRow } from '@/components/songs/SongRow';
-import { searchSongs } from '@/lib/songs';
-import type { Song } from '@/types';
+import {
+  useSearch,
+  useSearchHistory,
+  useAddSearchHistory,
+  useRemoveSearchHistory,
+  useClearSearchHistory,
+} from '@/lib/queries';
+import { useAuthStore } from '@/stores/auth.store';
 
 const filters = ['Tất cả', 'Karaoke', 'Có lời', 'Không lời', 'Beat', 'Demo'];
-const recentSearches = ['Hoa nở không màu', 'Sơn Tùng', 'Bolero buồn', 'Despacito', 'See you again'];
 
 export default function SearchPage() {
+  const user = useAuthStore((s) => s.user);
   const [query, setQuery] = useState('');
+  const [debounced, setDebounced] = useState('');
   const [filter, setFilter] = useState('Tất cả');
   const [view, setView] = useState<'grid' | 'list'>('grid');
 
-  const [results, setResults] = useState<Song[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Debounce 400ms rồi mới gọi YouTube (tránh gọi mỗi ký tự — tiết kiệm quota).
+  // Debounce 400ms: chỉ cập nhật `debounced` (key của useSearch) sau khi ngừng gõ
+  // → tránh gọi YouTube mỗi ký tự (tiết kiệm quota). TanStack Query lo cache/huỷ.
   useEffect(() => {
-    const q = query.trim();
-    if (!q) {
-      setResults([]);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      searchSongs(q, 20, controller.signal)
-        .then((data) => setResults(data))
-        .catch((e: unknown) => {
-          if (controller.signal.aborted) return;
-          setError(e instanceof Error ? e.message : 'Tìm kiếm thất bại');
-          setResults([]);
-        })
-        .finally(() => {
-          if (!controller.signal.aborted) setLoading(false);
-        });
-    }, 400);
-    return () => {
-      controller.abort();
-      clearTimeout(timer);
-    };
+    const timer = setTimeout(() => setDebounced(query.trim()), 400);
+    return () => clearTimeout(timer);
   }, [query]);
+
+  const { data: results = [], isFetching, isError } = useSearch(debounced);
+  const loading = isFetching && debounced.length > 0;
+  const error = isError ? 'Tìm kiếm thất bại' : null;
+
+  // Lịch sử tìm kiếm (DB, đồng bộ web ↔ mobile).
+  const { data: recent = [] } = useSearchHistory();
+  const addHistory = useAddSearchHistory();
+  const removeHistory = useRemoveSearchHistory();
+  const clearHistory = useClearSearchHistory();
+
+  // Lưu từ khoá khi "chốt" tìm kiếm (Enter hoặc bấm vào 1 kết quả).
+  const saveSearch = (q: string) => {
+    const v = q.trim();
+    if (user && v.length >= 2) addHistory.mutate(v);
+  };
 
   return (
     <div className="container py-6 space-y-6">
@@ -61,6 +57,9 @@ export default function SearchPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveSearch(query);
+            }}
             placeholder="Tìm bài hát, ca sĩ, playlist..."
             className="pl-12 pr-12 h-14 text-base rounded-2xl"
             autoFocus
@@ -116,21 +115,47 @@ export default function SearchPage() {
       {/* Empty / Recent / Results */}
       {!query ? (
         <div>
-          <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Tìm kiếm gần đây
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {recentSearches.map((s) => (
-              <button
-                key={s}
-                onClick={() => setQuery(s)}
-                className="px-4 py-2 rounded-full bg-card hover:bg-accent text-sm transition-colors"
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Tìm kiếm gần đây
+            </h3>
+            {recent.length > 0 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-xs"
+                onClick={() => clearHistory.mutate()}
               >
-                {s}
-              </button>
-            ))}
+                Xóa tất cả
+              </Button>
+            )}
           </div>
+          {!user ? (
+            <p className="text-sm text-muted-foreground">
+              Đăng nhập để lưu &amp; đồng bộ lịch sử tìm kiếm.
+            </p>
+          ) : recent.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Chưa có lịch sử tìm kiếm.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {recent.map((item) => (
+                <div
+                  key={item.id}
+                  className="group flex items-center gap-1 pl-4 pr-2 py-2 rounded-full bg-card hover:bg-accent text-sm transition-colors"
+                >
+                  <button onClick={() => setQuery(item.query)}>{item.query}</button>
+                  <button
+                    onClick={() => removeHistory.mutate(item.id)}
+                    className="opacity-50 hover:opacity-100"
+                    aria-label="Xóa"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       ) : loading ? (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -142,7 +167,7 @@ export default function SearchPage() {
         <div className="py-16 text-center">
           <p className="text-sm text-destructive">{error}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Kiểm tra backend đã chạy (cổng 3000) và YOUTUBE_API_KEY.
+            Kiểm tra backend đã chạy (cổng 3001) và YOUTUBE_API_KEY.
           </p>
         </div>
       ) : results.length === 0 ? (
@@ -150,7 +175,7 @@ export default function SearchPage() {
           Không tìm thấy bài nào cho &quot;{query}&quot;
         </div>
       ) : (
-        <div>
+        <div onClickCapture={() => saveSearch(debounced)}>
           <p className="text-sm text-muted-foreground mb-4">
             Tìm thấy <span className="font-semibold text-foreground">{results.length}</span> kết quả
             cho &quot;{query}&quot;

@@ -1,8 +1,12 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:karaoke/design/theme/styles/app_color_tokens.dart';
 import 'package:karaoke/design/theme/styles/app_dimensions.dart';
+import 'package:karaoke/features/favorites/presentation/widgets/favorite_button.dart';
+import 'package:karaoke/features/song/presentation/providers/song_detail_providers.dart';
+import 'package:karaoke/features/songs/presentation/providers/trending_notifier.dart';
 import 'package:karaoke/routes/config/app_router.dart';
 import 'package:karaoke/shared/mocks/mock_categories.dart';
 import 'package:karaoke/shared/mocks/mock_songs.dart';
@@ -13,12 +17,20 @@ import 'package:karaoke/shared/widgets/section_header.dart';
 import 'package:karaoke/shared/widgets/song_card.dart';
 import 'package:karaoke/shared/widgets/song_tile.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends ConsumerWidget {
   const HomePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final hero = mockSongs.first;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Trending lấy từ backend; trong lúc loading/lỗi fallback sang mock để giữ UI.
+    final trending = ref.watch(trendingProvider).value ?? trendingSongs;
+    final hero = trending.isNotEmpty ? trending.first : mockSongs.first;
+    // "Đề xuất" lấy thật từ YouTube (search theo từ khoá gợi ý); lúc đang tải thì
+    // tạm hiển thị trending để không bị trống.
+    final recommendedReal = ref.watch(songSearchProvider('Nhạc Trẻ Việt hay nhất')).value;
+    final recommended = (recommendedReal == null || recommendedReal.isEmpty)
+        ? trending
+        : recommendedReal;
     return Scaffold(
       backgroundColor: context.bgPage,
       body: SafeArea(
@@ -34,7 +46,10 @@ class HomePage extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       onPressed: () {},
-                      icon: Icon(Icons.notifications_outlined, color: context.textBody),
+                      icon: Icon(
+                        Icons.notifications_outlined,
+                        color: context.textBody,
+                      ),
                     ),
                     CircleAvatar(
                       radius: 18.r,
@@ -52,11 +67,14 @@ class HomePage extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16.r),
                 child: GestureDetector(
-                  onTap: () => context.router.push(PlayerRoute(id: hero.youtubeId)),
+                  onTap: () =>
+                      context.router.push(PlayerRoute(id: hero.youtubeId)),
                   child: AspectRatio(
                     aspectRatio: 16 / 9,
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusLarge),
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.radiusLarge,
+                      ),
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -87,8 +105,9 @@ class HomePage extends StatelessWidget {
                                   ),
                                   decoration: BoxDecoration(
                                     color: context.brandPrimary,
-                                    borderRadius:
-                                        BorderRadius.circular(AppDimensions.circle),
+                                    borderRadius: BorderRadius.circular(
+                                      AppDimensions.circle,
+                                    ),
                                   ),
                                   child: Text(
                                     '🔥 ĐANG HOT',
@@ -133,7 +152,8 @@ class HomePage extends StatelessWidget {
               child: SectionHeader(
                 title: '🔥 Đang trending',
                 subtitle: 'Top 10 bài hot nhất tuần này',
-                onSeeAll: () {},
+                onSeeAll: () =>
+                    context.router.push(CategoryRoute(slug: 'trending')),
               ),
             ),
             SliverToBoxAdapter(
@@ -142,12 +162,18 @@ class HomePage extends StatelessWidget {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: EdgeInsets.symmetric(horizontal: 16.r),
-                  itemCount: trendingSongs.length,
+                  itemCount: trending.length,
                   separatorBuilder: (_, _) => SizedBox(width: 12.r),
                   itemBuilder: (_, i) => SongCard(
-                    song: trendingSongs[i],
+                    song: trending[i],
                     width: 160.r,
-                    onTap: () => context.router.push(SongDetailRoute(id: trendingSongs[i].youtubeId)),
+                    favoriteButton: FavoriteButton(
+                      song: trending[i],
+                      color: Colors.white,
+                    ),
+                    onTap: () => context.router.push(
+                      SongDetailRoute(id: trending[i].youtubeId),
+                    ),
                   ),
                 ),
               ),
@@ -172,7 +198,9 @@ class HomePage extends StatelessWidget {
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => CategoryCard(
                     category: mockCategories[i],
-                    onTap: () => context.router.push(CategoryRoute(slug: mockCategories[i].slug)),
+                    onTap: () => context.router.push(
+                      CategoryRoute(slug: mockCategories[i].slug),
+                    ),
                   ),
                   childCount: mockCategories.length,
                 ),
@@ -184,7 +212,8 @@ class HomePage extends StatelessWidget {
               child: SectionHeader(
                 title: '✨ Đề xuất cho bạn',
                 subtitle: 'Dựa trên lịch sử hát',
-                onSeeAll: () {},
+                onSeeAll: () =>
+                    context.router.push(CategoryRoute(slug: 'nhactre')),
               ),
             ),
             SliverToBoxAdapter(
@@ -193,12 +222,14 @@ class HomePage extends StatelessWidget {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   padding: EdgeInsets.symmetric(horizontal: 16.r),
-                  itemCount: recommendedSongs.length,
+                  itemCount: recommended.length,
                   separatorBuilder: (_, _) => SizedBox(width: 12.r),
                   itemBuilder: (_, i) => SongCard(
-                    song: recommendedSongs[i],
+                    song: recommended[i],
                     width: 160.r,
-                    onTap: () => context.router.push(SongDetailRoute(id: recommendedSongs[i].youtubeId)),
+                    onTap: () => context.router.push(
+                      SongDetailRoute(id: recommended[i].youtubeId),
+                    ),
                   ),
                 ),
               ),
@@ -209,7 +240,8 @@ class HomePage extends StatelessWidget {
               child: SectionHeader(
                 title: '🏆 Top tuần này',
                 subtitle: 'Bài được hát nhiều nhất',
-                onSeeAll: () {},
+                onSeeAll: () =>
+                    context.router.push(CategoryRoute(slug: 'trending')),
               ),
             ),
             SliverPadding(
@@ -217,11 +249,14 @@ class HomePage extends StatelessWidget {
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (_, i) => SongTile(
-                    song: trendingSongs[i],
+                    song: trending[i],
                     index: i + 1,
-                    onTap: () => context.router.push(SongDetailRoute(id: trendingSongs[i].youtubeId)),
+                    trailing: FavoriteButton(song: trending[i]),
+                    onTap: () => context.router.push(
+                      SongDetailRoute(id: trending[i].youtubeId),
+                    ),
                   ),
-                  childCount: 5,
+                  childCount: trending.length < 5 ? trending.length : 5,
                 ),
               ),
             ),

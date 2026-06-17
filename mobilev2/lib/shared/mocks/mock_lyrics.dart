@@ -1,4 +1,5 @@
 import 'package:karaoke/shared/models/lyric_line.dart';
+import 'package:karaoke/shared/utils/lrc_parser.dart';
 
 const String mockLrcContent = '''
 [00:00.00]Hoa Nở Không Màu - Hoài Lâm

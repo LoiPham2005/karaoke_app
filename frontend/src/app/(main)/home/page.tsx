@@ -1,16 +1,41 @@
+'use client';
+
+import { useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Play, TrendingUp, Sparkles, Music2 } from 'lucide-react';
+import { Play, TrendingUp } from 'lucide-react';
 import { SongCard } from '@/components/songs/SongCard';
 import { SongRow } from '@/components/songs/SongRow';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { mockSongs, trendingSongs, recommendedSongs, newReleases } from '@/mocks/songs';
+import { mockSongs, recommendedSongs, newReleases } from '@/mocks/songs';
 import { categories } from '@/mocks/categories';
+import { useTrending } from '@/lib/queries';
 import { cn, formatNumber } from '@/lib/utils';
 
 export default function HomePage() {
   const heroSong = mockSongs[0];
+
+  const { data: trending = [], isLoading: trendingLoading, isError } = useTrending();
+  const trendingError = isError ? 'Không tải được bài thịnh hành' : null;
+
+  // Cuộn tới section theo hash (#trending / #new) — shortcut từ Sidebar KHÁM PHÁ.
+  // Next App Router không tự cuộn tới hash khi điều hướng → xử lý thủ công.
+  useEffect(() => {
+    const scrollToHash = () => {
+      const hash = window.location.hash;
+      if (!hash) return;
+      document
+        .getElementById(hash.slice(1))
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    const t = setTimeout(scrollToHash, 200);
+    window.addEventListener('hashchange', scrollToHash);
+    return () => {
+      clearTimeout(t);
+      window.removeEventListener('hashchange', scrollToHash);
+    };
+  }, []);
 
   return (
     <div className="container py-6 space-y-10">
@@ -46,12 +71,31 @@ export default function HomePage() {
 
       {/* TRENDING */}
       <section id="trending">
-        <SectionHeader title="🔥 Đang trending" desc="Top 10 bài hot nhất tuần này" href="/category/trending" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {trendingSongs.slice(0, 10).map((song) => (
-            <SongCard key={song.youtubeId} song={song} />
-          ))}
-        </div>
+        <SectionHeader title="🔥 Đang trending" desc="Top bài hot nhất trong app" href="/category/trending" />
+        {trendingLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {Array.from({ length: 10 }).map((_, i) => (
+              <div key={i} className="aspect-video rounded-xl bg-card animate-pulse" />
+            ))}
+          </div>
+        ) : trendingError ? (
+          <div className="py-12 text-center">
+            <p className="text-sm text-destructive">{trendingError}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Kiểm tra backend đã chạy (cổng 3001).
+            </p>
+          </div>
+        ) : trending.length === 0 ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            Chưa có bài thịnh hành nào. Hãy hát vài bài để bắt đầu!
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {trending.slice(0, 10).map((song) => (
+              <SongCard key={song.youtubeId} song={song} />
+            ))}
+          </div>
+        )}
       </section>
 
       {/* CATEGORIES */}
@@ -94,14 +138,16 @@ export default function HomePage() {
       </section>
 
       {/* TOP CHARTS */}
-      <section>
-        <SectionHeader title="🏆 Top 5 tuần này" desc="Bài được hát nhiều nhất" />
-        <div className="grid md:grid-cols-2 gap-2 bg-card rounded-2xl p-3">
-          {trendingSongs.slice(0, 10).map((song, idx) => (
-            <SongRow key={song.youtubeId} song={song} index={idx + 1} />
-          ))}
-        </div>
-      </section>
+      {trending.length > 0 && (
+        <section>
+          <SectionHeader title="🏆 Bảng xếp hạng" desc="Bài được hát nhiều nhất" />
+          <div className="grid md:grid-cols-2 gap-2 bg-card rounded-2xl p-3">
+            {trending.slice(0, 10).map((song, idx) => (
+              <SongRow key={song.youtubeId} song={song} index={idx + 1} />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* NEW RELEASES */}
       <section id="new">

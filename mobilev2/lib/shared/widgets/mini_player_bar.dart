@@ -1,22 +1,30 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:karaoke/design/theme/styles/app_color_tokens.dart';
 import 'package:karaoke/design/theme/styles/app_dimensions.dart';
-import 'package:karaoke/shared/mocks/mock_songs.dart';
+import 'package:karaoke/features/favorites/presentation/widgets/favorite_button.dart';
+import 'package:karaoke/features/player/presentation/providers/now_playing_notifier.dart';
+import 'package:karaoke/routes/config/app_router.dart';
 
-/// Mini player sticky trên BottomNav khi đang phát nhạc
-class MiniPlayerBar extends StatelessWidget {
-  const MiniPlayerBar({super.key, this.onTap});
-
-  final VoidCallback? onTap;
+/// Mini player sticky trên BottomNav. Ẩn khi không có bài đang phát.
+/// Bấm cả khối (hoặc nút ▶) → mở lại màn hát; nút X → tắt mini-player.
+class MiniPlayerBar extends ConsumerWidget {
+  const MiniPlayerBar({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final song = mockSongs.first;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final song = ref.watch(nowPlayingProvider);
+    if (song == null) return const SizedBox.shrink();
+
+    void openPlayer() =>
+        context.router.push(PlayerRoute(id: song.youtubeId));
+
     return Material(
       color: context.bgCard,
       child: InkWell(
-        onTap: onTap,
+        onTap: openPlayer,
         child: Container(
           height: 64.r,
           padding: EdgeInsets.symmetric(horizontal: 12.r),
@@ -67,10 +75,7 @@ class MiniPlayerBar extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(Icons.favorite_border, color: context.textBody),
-              ),
+              FavoriteButton(song: song, size: 20.r),
               Container(
                 width: 40.r,
                 height: 40.r,
@@ -81,10 +86,14 @@ class MiniPlayerBar extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: IconButton(
-                  onPressed: () {},
+                  onPressed: openPlayer,
                   padding: EdgeInsets.zero,
                   icon: Icon(Icons.play_arrow, color: Colors.white, size: 22.r),
                 ),
+              ),
+              IconButton(
+                onPressed: () => ref.read(nowPlayingProvider.notifier).clear(),
+                icon: Icon(Icons.close, color: context.textSub, size: 20.r),
               ),
             ],
           ),

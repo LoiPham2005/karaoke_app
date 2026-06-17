@@ -20,7 +20,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   app.enableCors({
-    origin: [config.get<string>('frontendUrl') ?? 'http://localhost:3001'],
+    origin: [config.get<string>('frontendUrl') ?? 'http://localhost:3000'],
     credentials: true,
   });
 
@@ -47,7 +47,7 @@ async function bootstrap() {
     logger.log(`📚 Swagger docs: http://localhost:${config.get('port')}/docs`);
   }
 
-  const port = config.get<number>('port') ?? 3000;
+  const port = config.get<number>('port') ?? 3001;
   await app.listen(port);
   logger.log(`🚀 Karaoke API running on http://localhost:${port}/api/v1`);
 }

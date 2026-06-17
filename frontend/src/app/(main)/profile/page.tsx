@@ -1,4 +1,9 @@
-import { Camera, Edit, Crown, Music2, Clock, ListMusic, FileText } from 'lucide-react';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Camera, Edit, Crown, Music2, Clock, ListMusic, FileText, LogOut } from 'lucide-react';
+import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SongRow } from '@/components/songs/SongRow';
 import { mockSongs } from '@/mocks/songs';
 import { mockPlaylists } from '@/mocks/playlists';
-import { currentUser } from '@/mocks/users';
+import { useAuthStore } from '@/stores/auth.store';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -17,21 +22,41 @@ const stats = [
   { label: 'Đóng góp lyrics', value: '12', icon: FileText },
 ];
 
-// Mock activity heatmap data
-const activity = Array.from({ length: 30 }, (_, i) => ({
-  day: i,
-  count: Math.floor(Math.random() * 10),
-}));
+// Mock activity heatmap (deterministic — tránh hydration mismatch).
+const activity = Array.from({ length: 30 }, (_, i) => ({ day: i, count: (i * 3 + 2) % 10 }));
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const logout = useAuthStore((s) => s.logout);
+
+  useEffect(() => {
+    if (!isLoading && !user) router.replace('/login');
+  }, [isLoading, user, router]);
+
+  if (!user) {
+    return (
+      <div className="container py-20 text-center text-muted-foreground">
+        {isLoading ? 'Đang tải...' : 'Vui lòng đăng nhập'}
+      </div>
+    );
+  }
+
+  const handleLogout = async () => {
+    await logout();
+    toast.success('Đã đăng xuất');
+    router.replace('/login');
+  };
+
   return (
     <div className="container py-6 space-y-8">
       {/* Header */}
       <div className="flex flex-col md:flex-row gap-6 items-center md:items-end">
         <div className="relative">
           <Avatar className="h-32 w-32 ring-4 ring-primary/30">
-            <AvatarImage src={currentUser.avatarUrl} />
-            <AvatarFallback className="text-3xl">{currentUser.displayName[0]}</AvatarFallback>
+            <AvatarImage src={user.avatarUrl ?? undefined} />
+            <AvatarFallback className="text-3xl">{user.displayName[0]}</AvatarFallback>
           </Avatar>
           <Button
             size="icon-sm"
@@ -43,28 +68,34 @@ export default function ProfilePage() {
         </div>
         <div className="flex-1 text-center md:text-left space-y-2">
           <div className="flex items-center justify-center md:justify-start gap-2">
-            <h1 className="text-3xl font-bold">{currentUser.displayName}</h1>
-            {currentUser.isPremium && (
+            <h1 className="text-3xl font-bold">{user.displayName}</h1>
+            {user.isPremium && (
               <Badge variant="default">
                 <Crown className="h-3 w-3 mr-1" />
                 Premium
               </Badge>
             )}
           </div>
-          <p className="text-muted-foreground">{currentUser.email}</p>
-          {currentUser.bio && <p className="text-sm">{currentUser.bio}</p>}
+          {user.email && <p className="text-muted-foreground">{user.email}</p>}
+          {user.bio && <p className="text-sm">{user.bio}</p>}
           <p className="text-xs text-muted-foreground">
             Thành viên từ{' '}
-            {new Date(currentUser.createdAt).toLocaleDateString('vi-VN', {
+            {new Date(user.createdAt).toLocaleDateString('vi-VN', {
               month: 'long',
               year: 'numeric',
             })}
           </p>
         </div>
-        <Button variant="outline">
-          <Edit className="h-4 w-4 mr-2" />
-          Chỉnh sửa
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline">
+            <Edit className="h-4 w-4 mr-2" />
+            Chỉnh sửa
+          </Button>
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Đăng xuất
+          </Button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -88,9 +119,7 @@ export default function ProfilePage() {
               className="aspect-square rounded"
               style={{
                 backgroundColor:
-                  a.count === 0
-                    ? 'hsl(var(--muted))'
-                    : `hsl(343 100% ${72 - a.count * 5}%)`,
+                  a.count === 0 ? 'hsl(var(--muted))' : `hsl(343 100% ${72 - a.count * 5}%)`,
               }}
               title={`Ngày ${a.day + 1}: ${a.count} bài`}
             />
@@ -127,19 +156,23 @@ export default function ProfilePage() {
 
         <TabsContent value="playlists">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {mockPlaylists.filter((p) => p.isPublic).map((pl) => (
-              <Link
-                key={pl.id}
-                href={`/playlist/${pl.id}`}
-                className="rounded-2xl bg-card hover:bg-accent p-3 transition-all"
-              >
-                <div className="relative aspect-square rounded-xl overflow-hidden mb-3">
-                  {pl.coverUrl && <Image src={pl.coverUrl} alt={pl.name} fill className="object-cover" />}
-                </div>
-                <h4 className="font-semibold truncate">{pl.name}</h4>
-                <p className="text-xs text-muted-foreground">{pl.songCount} bài</p>
-              </Link>
-            ))}
+            {mockPlaylists
+              .filter((p) => p.isPublic)
+              .map((pl) => (
+                <Link
+                  key={pl.id}
+                  href={`/playlist/${pl.id}`}
+                  className="rounded-2xl bg-card hover:bg-accent p-3 transition-all"
+                >
+                  <div className="relative aspect-square rounded-xl overflow-hidden mb-3">
+                    {pl.coverUrl && (
+                      <Image src={pl.coverUrl} alt={pl.name} fill className="object-cover" />
+                    )}
+                  </div>
+                  <h4 className="font-semibold truncate">{pl.name}</h4>
+                  <p className="text-xs text-muted-foreground">{pl.songCount} bài</p>
+                </Link>
+              ))}
           </div>
         </TabsContent>
 

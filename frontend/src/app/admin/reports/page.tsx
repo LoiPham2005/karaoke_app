@@ -1,49 +1,55 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, X, Eye, Play } from 'lucide-react';
+import Link from 'next/link';
+import { Check, X, Play } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { mockSongs } from '@/mocks/songs';
+import { useAdminReports, useUpdateAdminReport } from '@/lib/queries';
 
-const mockReports = mockSongs.slice(0, 15).map((song, i) => ({
-  id: `r-${i + 1}`,
-  song,
-  reason: [
-    'Video không phát được',
-    'Sai lyrics',
-    'Audio bị lệch',
-    'Nội dung không phù hợp',
-    'Bản quyền',
-  ][i % 5],
-  detail: 'User báo cáo chi tiết về vấn đề này...',
-  user: { name: `user_${i + 1}`, email: `user${i + 1}@gmail.com` },
-  status: i % 3 === 0 ? 'RESOLVED' : i % 3 === 1 ? 'PENDING' : 'REJECTED',
-  createdAt: `${i + 1} giờ trước`,
-}));
+const FILTERS = [
+  { id: 'PENDING', label: 'Chờ xử lý' },
+  { id: 'RESOLVED', label: 'Đã xử lý' },
+  { id: 'REJECTED', label: 'Từ chối' },
+  { id: '', label: 'Tất cả' },
+];
+
+const STATUS_BADGE: Record<string, 'warning' | 'success' | 'destructive' | 'outline'> = {
+  PENDING: 'warning',
+  RESOLVED: 'success',
+  REJECTED: 'destructive',
+};
 
 export default function AdminReportsPage() {
   const [filter, setFilter] = useState('PENDING');
-  const filtered = mockReports.filter((r) => filter === 'ALL' || r.status === filter);
+  const { data, isLoading } = useAdminReports(filter);
+  const update = useUpdateAdminReport();
+  const reports = data?.items ?? [];
+
+  const resolve = (id: string, status: string) =>
+    update.mutate(
+      { id, status },
+      {
+        onSuccess: () =>
+          toast.success(status === 'RESOLVED' ? 'Đã xử lý' : 'Đã từ chối'),
+        onError: () => toast.error('Không cập nhật được'),
+      },
+    );
 
   return (
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Báo cáo bài hát</h1>
-        <p className="text-muted-foreground mt-1">{mockReports.length} báo cáo từ người dùng</p>
+        <p className="text-muted-foreground mt-1">{data?.total ?? 0} báo cáo</p>
       </div>
 
       <div className="flex items-center gap-2">
-        {[
-          { id: 'ALL', label: 'Tất cả' },
-          { id: 'PENDING', label: 'Chờ xử lý' },
-          { id: 'RESOLVED', label: 'Đã xử lý' },
-          { id: 'REJECTED', label: 'Từ chối' },
-        ].map((f) => (
+        {FILTERS.map((f) => (
           <Badge
-            key={f.id}
+            key={f.id || 'all'}
             variant={filter === f.id ? 'default' : 'outline'}
-            className="cursor-pointer px-4 py-1.5"
+            className="cursor-pointer px-4 py-1.5 text-sm"
             onClick={() => setFilter(f.id)}
           >
             {f.label}
@@ -52,52 +58,71 @@ export default function AdminReportsPage() {
       </div>
 
       <div className="space-y-3">
-        {filtered.map((r) => (
-          <div key={r.id} className="bg-card rounded-2xl p-4 flex items-start gap-4">
-            <img
-              src={r.song.thumbnailUrl}
-              alt={r.song.title}
-              className="w-20 h-20 rounded-xl object-cover shrink-0"
-            />
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-semibold">{r.song.title}</h3>
-                  <p className="text-sm text-muted-foreground">{r.song.artist}</p>
-                </div>
-                {r.status === 'PENDING' && <Badge variant="warning">Chờ xử lý</Badge>}
-                {r.status === 'RESOLVED' && <Badge variant="success">Đã xử lý</Badge>}
-                {r.status === 'REJECTED' && <Badge variant="destructive">Từ chối</Badge>}
-              </div>
-              <div>
-                <p className="text-sm font-medium">Lý do: {r.reason}</p>
-                <p className="text-xs text-muted-foreground mt-1">{r.detail}</p>
-              </div>
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <p className="text-xs text-muted-foreground">
-                  Báo bởi <span className="font-medium text-foreground">@{r.user.name}</span> ·{' '}
-                  {r.createdAt}
-                </p>
-                {r.status === 'PENDING' && (
-                  <div className="flex items-center gap-2">
-                    <Button size="sm" variant="outline">
-                      <Play className="h-3 w-3 mr-1" />
-                      Phát thử
-                    </Button>
-                    <Button size="sm" variant="destructive">
-                      <X className="h-3 w-3 mr-1" />
-                      Từ chối
-                    </Button>
-                    <Button size="sm" variant="gradient">
-                      <Check className="h-3 w-3 mr-1" />
-                      Xử lý
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+        {isLoading ? (
+          <div className="bg-card rounded-2xl p-8 text-center text-sm text-muted-foreground">
+            Đang tải...
           </div>
-        ))}
+        ) : reports.length === 0 ? (
+          <div className="bg-card rounded-2xl p-8 text-center text-sm text-muted-foreground">
+            Không có báo cáo
+          </div>
+        ) : (
+          reports.map((r) => (
+            <div key={r.id} className="bg-card rounded-2xl p-4 flex items-center gap-4">
+              <Link
+                href={`/play/${r.song?.youtubeId}`}
+                className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-accent flex items-center justify-center"
+              >
+                {r.song?.thumbnailUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={r.song.thumbnailUrl}
+                    alt={r.song.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Play className="h-5 w-5 text-muted-foreground" />
+                )}
+              </Link>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{r.song?.title}</p>
+                <p className="text-xs text-primary">{r.reason}</p>
+                {r.detail && (
+                  <p className="text-xs text-muted-foreground truncate mt-0.5">{r.detail}</p>
+                )}
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  bởi {r.user?.displayName ?? r.user?.email}
+                </p>
+              </div>
+
+              <Badge variant={STATUS_BADGE[r.status] ?? 'outline'} className="shrink-0">
+                {r.status}
+              </Badge>
+
+              {r.status === 'PENDING' && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    title="Đã xử lý"
+                    onClick={() => resolve(r.id, 'RESOLVED')}
+                  >
+                    <Check className="h-4 w-4 text-emerald-400" />
+                  </Button>
+                  <Button
+                    size="icon-sm"
+                    variant="ghost"
+                    title="Từ chối"
+                    onClick={() => resolve(r.id, 'REJECTED')}
+                  >
+                    <X className="h-4 w-4 text-red-400" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

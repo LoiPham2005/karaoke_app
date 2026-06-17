@@ -7,9 +7,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { useAuthStore } from '@/stores/auth.store';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const registerAction = useAuthStore((s) => s.register);
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -30,11 +35,15 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // Simulate registration delay
-    setTimeout(() => {
+    try {
+      const user = await registerAction(email.trim(), password, displayName.trim());
+      toast.success(`Chào mừng ${user.displayName}!`);
       router.push('/home');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Đăng ký thất bại');
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
 
   return (
@@ -51,7 +60,13 @@ export default function RegisterPage() {
           <label className="text-sm font-medium">Tên hiển thị</label>
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Nguyễn Văn A" className="pl-10" required />
+            <Input
+              placeholder="Nguyễn Văn A"
+              className="pl-10"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              required
+            />
           </div>
         </div>
 
@@ -59,7 +74,14 @@ export default function RegisterPage() {
           <label className="text-sm font-medium">Email</label>
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input type="email" placeholder="ban@gmail.com" className="pl-10" required />
+            <Input
+              type="email"
+              placeholder="ban@gmail.com"
+              className="pl-10"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
         </div>
 

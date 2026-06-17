@@ -8,14 +8,19 @@ import 'package:karaoke/shared/utils/format_utils.dart';
 /// Card bài hát vertical: thumbnail + title + artist
 class SongCard extends StatelessWidget {
   const SongCard({
-    required this.song, super.key,
+    required this.song,
+    super.key,
     this.onTap,
     this.width,
+    this.favoriteButton,
   });
 
   final SongModel song;
   final VoidCallback? onTap;
   final double? width;
+
+  /// Nút yêu thích (overlay góc trên-phải thumbnail). `null` = không hiển thị.
+  final Widget? favoriteButton;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +54,10 @@ class SongCard extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.4)],
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.4),
+                          ],
                         ),
                       ),
                     ),
@@ -58,10 +66,15 @@ class SongCard extends StatelessWidget {
                         top: 8.r,
                         left: 8.r,
                         child: Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8.r, vertical: 3.r),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8.r,
+                            vertical: 3.r,
+                          ),
                           decoration: BoxDecoration(
                             color: context.statusSuccess,
-                            borderRadius: BorderRadius.circular(AppDimensions.circle),
+                            borderRadius: BorderRadius.circular(
+                              AppDimensions.circle,
+                            ),
                           ),
                           child: Text(
                             'Có lời',
@@ -77,7 +90,10 @@ class SongCard extends StatelessWidget {
                       right: 8.r,
                       bottom: 8.r,
                       child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6.r, vertical: 2.r),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 6.r,
+                          vertical: 2.r,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.7),
                           borderRadius: BorderRadius.circular(4.r),
@@ -92,6 +108,8 @@ class SongCard extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (favoriteButton != null)
+                      Positioned(top: 0, right: 0, child: favoriteButton!),
                   ],
                 ),
               ),

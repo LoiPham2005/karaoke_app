@@ -19,7 +19,7 @@ targets:
       # ─── JSON SERIALIZABLE ──────────────────────────────────────────
       json_serializable:
         options:
-          field_rename: snake
+          field_rename: none
           generic_argument_factories: true
           explicit_to_json: true
           include_if_null: false

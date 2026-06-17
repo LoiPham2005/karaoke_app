@@ -42,7 +42,4 @@ abstract class RegisterModule {
   @lazySingleton
   Dio dio(DioClient client) => client.dio;
 
-  // FirebaseRemoteConfig: KHÔNG register qua DI — services tự lazy resolve trong
-  // `initialize()` để tránh crash khi Firebase chưa initializeApp xong.
-  // Xem AdConfigService / AppConfigService.
 }
