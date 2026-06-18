@@ -25,6 +25,10 @@ abstract class SongsService {
   @GET('/songs/trending')
   Future<ApiResponse<List<SongModel>>> trending();
 
+  /// `GET /songs/recent` → `data Song[]` (bài mới thêm hệ thống).
+  @GET('/songs/recent')
+  Future<ApiResponse<List<SongModel>>> recent();
+
   /// `GET /songs/{youtubeId}` → `data Song`.
   @GET('/songs/{youtubeId}')
   Future<ApiResponse<SongModel>> detail(@Path('youtubeId') String youtubeId);

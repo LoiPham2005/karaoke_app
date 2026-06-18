@@ -4,6 +4,7 @@ import 'package:karaoke/core/services/app_auth/app_auth_notifier.dart';
 import 'package:karaoke/features/favorites/data/models/song_ref_request.dart';
 import 'package:karaoke/features/playlists/data/models/create_playlist_request.dart';
 import 'package:karaoke/features/playlists/data/models/playlist_model.dart';
+import 'package:karaoke/features/playlists/data/models/update_playlist_request.dart';
 import 'package:karaoke/features/playlists/data/services/playlists_service.dart';
 import 'package:karaoke/shared/models/song_model.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -54,6 +55,33 @@ class PlaylistsNotifier extends _$PlaylistsNotifier
     },
     keepPreviousOnLoading: true,
     successMessage: 'Đã tạo playlist',
+  );
+
+  /// Cập nhật metadata playlist [id] (tên/mô tả/công khai) rồi refresh lại list.
+  ///
+  /// Đồng thời invalidate [playlistDetailProvider] để màn chi tiết tải lại data
+  /// mới (header phản ánh đúng tên/trạng thái sau khi sửa).
+  Future<void> updatePlaylist(
+    String id, {
+    String? name,
+    String? description,
+    bool? isPublic,
+  }) => runAsync(
+    action: () async {
+      await _service.update(
+        id,
+        UpdatePlaylistRequest(
+          name: name,
+          description: description,
+          isPublic: isPublic,
+        ),
+      );
+      ref.invalidate(playlistDetailProvider(id));
+      final response = await _service.list();
+      return response.data ?? const [];
+    },
+    keepPreviousOnLoading: true,
+    successMessage: 'Đã cập nhật playlist',
   );
 
   /// Xoá playlist rồi refresh lại list.

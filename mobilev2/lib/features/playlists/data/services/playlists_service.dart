@@ -4,6 +4,7 @@ import 'package:karaoke/features/favorites/data/models/song_ref_request.dart';
 import 'package:karaoke/features/playlists/data/models/create_playlist_request.dart';
 import 'package:karaoke/features/playlists/data/models/playlist_model.dart';
 import 'package:karaoke/features/playlists/data/models/reorder_playlist_request.dart';
+import 'package:karaoke/features/playlists/data/models/update_playlist_request.dart';
 import 'package:retrofit/retrofit.dart';
 
 part 'playlists_service.g.dart';
@@ -26,6 +27,13 @@ abstract class PlaylistsService {
   /// `GET /playlists/{id}` → `data playlist + items[{ id, song, position }]`.
   @GET('/playlists/{id}')
   Future<ApiResponse<PlaylistModel>> detail(@Path('id') String id);
+
+  /// `PATCH /playlists/{id}` body `{ name?, description?, isPublic? }`.
+  @PATCH('/playlists/{id}')
+  Future<ApiResponse<PlaylistModel>> update(
+    @Path('id') String id,
+    @Body() UpdatePlaylistRequest body,
+  );
 
   /// `POST /playlists/{id}/songs` body `SongRef`.
   @POST('/playlists/{id}/songs')

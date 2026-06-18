@@ -6,6 +6,7 @@ import 'package:karaoke/design/theme/styles/app_color_tokens.dart';
 import 'package:karaoke/design/theme/styles/app_dimensions.dart';
 import 'package:karaoke/features/favorites/presentation/widgets/favorite_button.dart';
 import 'package:karaoke/features/song/presentation/providers/song_detail_providers.dart';
+import 'package:karaoke/features/songs/presentation/providers/recent_notifier.dart';
 import 'package:karaoke/features/songs/presentation/providers/trending_notifier.dart';
 import 'package:karaoke/routes/config/app_router.dart';
 import 'package:karaoke/shared/mocks/mock_categories.dart';
@@ -27,10 +28,15 @@ class HomePage extends ConsumerWidget {
     final hero = trending.isNotEmpty ? trending.first : mockSongs.first;
     // "Đề xuất" lấy thật từ YouTube (search theo từ khoá gợi ý); lúc đang tải thì
     // tạm hiển thị trending để không bị trống.
-    final recommendedReal = ref.watch(songSearchProvider('Nhạc Trẻ Việt hay nhất')).value;
+    final recommendedReal = ref
+        .watch(songSearchProvider('Nhạc Trẻ Việt hay nhất'))
+        .value;
     final recommended = (recommendedReal == null || recommendedReal.isEmpty)
         ? trending
         : recommendedReal;
+    // "Mới ra" lấy thật từ backend (bài mới thêm hệ thống). Rỗng/đang tải → ẩn
+    // section (không fallback mock).
+    final recent = ref.watch(recentProvider).value ?? const [];
     return Scaffold(
       backgroundColor: context.bgPage,
       body: SafeArea(
@@ -260,6 +266,38 @@ class HomePage extends ConsumerWidget {
                 ),
               ),
             ),
+
+            // ─── Mới ra ─────────────────────────────────
+            if (recent.isNotEmpty) ...[
+              const SliverToBoxAdapter(
+                child: SectionHeader(
+                  title: '🆕 Mới ra',
+                  subtitle: 'Bài mới thêm gần đây',
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 200.r,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: 16.r),
+                    itemCount: recent.length,
+                    separatorBuilder: (_, _) => SizedBox(width: 12.r),
+                    itemBuilder: (_, i) => SongCard(
+                      song: recent[i],
+                      width: 160.r,
+                      favoriteButton: FavoriteButton(
+                        song: recent[i],
+                        color: Colors.white,
+                      ),
+                      onTap: () => context.router.push(
+                        SongDetailRoute(id: recent[i].youtubeId),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
 
             SliverToBoxAdapter(child: SizedBox(height: 24.r)),
           ],
