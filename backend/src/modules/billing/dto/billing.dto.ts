@@ -12,3 +12,9 @@ export class CheckoutDto {
   @IsEnum(PaymentProvider)
   provider?: PaymentProvider;
 }
+
+export class ShopCheckoutDto {
+  @ApiProperty({ enum: ['SHOP_BASIC', 'SHOP_PRO'] })
+  @IsIn(['SHOP_BASIC', 'SHOP_PRO'])
+  plan!: 'SHOP_BASIC' | 'SHOP_PRO';
+}

@@ -17,6 +17,10 @@ export function formatNumber(n: number): string {
   return n.toString();
 }
 
+export function formatVnd(n: number): string {
+  return `${new Intl.NumberFormat('vi-VN').format(n)}₫`;
+}
+
 export function timeAgo(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const diff = (Date.now() - d.getTime()) / 1000;

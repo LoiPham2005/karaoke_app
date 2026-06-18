@@ -24,6 +24,8 @@ import { BillingModule } from './modules/billing/billing.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { SearchHistoryModule } from './modules/search-history/search-history.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ShopModule } from './modules/shop/shop.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -60,6 +62,8 @@ import { AdminModule } from './modules/admin/admin.module';
     ReportsModule,
     SearchHistoryModule,
     AdminModule,
+    ShopModule,
+    SuperAdminModule,
     MaintenanceModule,
   ],
   providers: [

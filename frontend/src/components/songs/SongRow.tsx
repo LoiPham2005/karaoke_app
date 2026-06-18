@@ -3,22 +3,47 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Play, Heart, MoreVertical, Plus } from 'lucide-react';
+import { Play, Heart, MoreVertical, Plus, ListPlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Song } from '@/types';
 import { cn, formatDuration, formatNumber } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { addFavorite, removeFavorite, toSongRef } from '@/lib/library';
+import { addFavorite, addToQueue, removeFavorite, toSongRef } from '@/lib/library';
 import { useAuthStore } from '@/stores/auth.store';
 
 interface SongRowProps {
   song: Song;
   index?: number;
+  /// Nếu có → menu "..." hiện "Xóa khỏi playlist" (chỉ dùng ở trang playlist).
+  onRemoveFromPlaylist?: () => void;
 }
 
-export function SongRow({ song, index }: SongRowProps) {
+export function SongRow({ song, index, onRemoveFromPlaylist }: SongRowProps) {
   const user = useAuthStore((s) => s.user);
   const [isFav, setIsFav] = useState(Boolean(song.isFavorite));
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const requireLogin = () => {
+    toast('Đăng nhập để dùng tính năng này');
+    return false;
+  };
+
+  const handleAddQueue = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setMenuOpen(false);
+    if (!user) return void requireLogin();
+    addToQueue(toSongRef(song))
+      .then(() => toast('Đã thêm vào hàng chờ'))
+      .catch(() => toast.error('Không thể thêm vào hàng chờ'));
+  };
+
+  const handleRemove = (e?: React.MouseEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    setMenuOpen(false);
+    onRemoveFromPlaylist?.();
+  };
 
   const toggleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -74,16 +99,56 @@ export function SongRow({ song, index }: SongRowProps) {
       <span className="text-xs text-muted-foreground tabular-nums w-12 text-right">
         {formatDuration(song.duration)}
       </span>
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button size="icon-sm" variant="ghost">
+      <div
+        className={cn(
+          'flex items-center gap-1 transition-opacity',
+          menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+        )}
+      >
+        <Button size="icon-sm" variant="ghost" onClick={handleAddQueue} title="Thêm vào hàng chờ">
           <Plus className="h-4 w-4" />
         </Button>
-        <Button size="icon-sm" variant="ghost" onClick={toggleFavorite}>
+        <Button size="icon-sm" variant="ghost" onClick={toggleFavorite} title="Yêu thích">
           <Heart className={cn('h-4 w-4', isFav && 'fill-current text-primary')} />
         </Button>
-        <Button size="icon-sm" variant="ghost">
-          <MoreVertical className="h-4 w-4" />
-        </Button>
+        <div className="relative">
+          <Button
+            size="icon-sm"
+            variant="ghost"
+            title="Thêm"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setMenuOpen((v) => !v);
+            }}
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+          {menuOpen && (
+            <>
+              {/* backdrop click-outside để đóng menu */}
+              <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+              <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-xl border border-border bg-card shadow-xl py-1">
+                <button
+                  onClick={handleAddQueue}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left"
+                >
+                  <ListPlus className="h-4 w-4" />
+                  Thêm vào hàng chờ
+                </button>
+                {onRemoveFromPlaylist && (
+                  <button
+                    onClick={handleRemove}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Xóa khỏi playlist
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

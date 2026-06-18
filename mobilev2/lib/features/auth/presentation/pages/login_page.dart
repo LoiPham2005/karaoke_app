@@ -205,7 +205,63 @@ class LoginPage extends HookConsumerWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 32.r),
+              SizedBox(height: 24.r),
+
+              // 🧪 DEV: đăng nhập nhanh bằng tài khoản seed thật (prisma/seed.ts).
+              // Mật khẩu chung "123456". Xoá block này khi lên production.
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12.r),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(AppDimensions.radius),
+                  border: Border.all(color: context.borderDefault),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      '⚡ ĐĂNG NHẬP NHANH (DEV) · mk: 123456',
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w600,
+                        color: context.textSub,
+                      ),
+                    ),
+                    SizedBox(height: 10.r),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _devBtn(
+                            context,
+                            '🎤',
+                            'Người dùng',
+                            'USER',
+                            isLoading,
+                            () => notifier.login(
+                              email: 'user@gmail.com',
+                              password: '123456',
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8.r),
+                        Expanded(
+                          child: _devBtn(
+                            context,
+                            '💎',
+                            'Premium',
+                            'Premium',
+                            isLoading,
+                            () => notifier.login(
+                              email: 'premium@gmail.com',
+                              password: '123456',
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 24.r),
 
               Center(
                 child: Row(
@@ -261,6 +317,49 @@ class LoginPage extends HookConsumerWidget {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(AppDimensions.radius),
         borderSide: BorderSide(color: context.brandPrimary, width: 1.5),
+      ),
+    );
+  }
+
+  /// 1 nút đăng nhập nhanh (Dev) — login thẳng bằng tài khoản seed.
+  Widget _devBtn(
+    BuildContext context,
+    String icon,
+    String label,
+    String desc,
+    bool isLoading,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: isLoading ? null : onTap,
+      child: Opacity(
+        opacity: isLoading ? 0.5 : 1,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: 12.r),
+          decoration: BoxDecoration(
+            color: context.bgInput,
+            borderRadius: BorderRadius.circular(AppDimensions.radius),
+            border: Border.all(color: context.borderDefault),
+          ),
+          child: Column(
+            children: [
+              Text(icon, style: TextStyle(fontSize: 22.sp)),
+              SizedBox(height: 4.r),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w600,
+                  color: context.textBody,
+                ),
+              ),
+              Text(
+                desc,
+                style: TextStyle(fontSize: 10.sp, color: context.textSub),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

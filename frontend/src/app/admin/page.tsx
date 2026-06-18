@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, Music2, Play, Crown, ListMusic, Flag } from 'lucide-react';
+import { Users, Music2, Play, Crown, ListMusic, Flag, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAdminStats, useAdminReports } from '@/lib/queries';
-import { formatNumber } from '@/lib/utils';
+import { formatNumber, formatVnd } from '@/lib/utils';
 
 export default function AdminDashboardPage() {
   const { data: stats, isLoading } = useAdminStats();
@@ -14,6 +14,13 @@ export default function AdminDashboardPage() {
   const cards = [
     { label: 'Tổng người dùng', value: stats?.totalUsers, icon: Users, color: 'text-blue-400' },
     { label: 'Người dùng Premium', value: stats?.premiumUsers, icon: Crown, color: 'text-amber-400' },
+    {
+      label: 'Doanh thu',
+      value: stats?.revenueVnd,
+      icon: DollarSign,
+      color: 'text-emerald-400',
+      isMoney: true,
+    },
     { label: 'Bài hát (cache)', value: stats?.totalSongs, icon: Music2, color: 'text-pink-400' },
     { label: 'Lượt phát trong app', value: stats?.totalPlays, icon: Play, color: 'text-emerald-400' },
     { label: 'Playlist', value: stats?.totalPlaylists, icon: ListMusic, color: 'text-purple-400' },
@@ -32,7 +39,11 @@ export default function AdminDashboardPage() {
           <div key={c.label} className="bg-card rounded-2xl p-5 space-y-2">
             <c.icon className={`h-5 w-5 ${c.color}`} />
             <p className="text-2xl font-bold">
-              {isLoading || c.value == null ? '—' : formatNumber(c.value)}
+              {isLoading || c.value == null
+                ? '—'
+                : c.isMoney
+                  ? formatVnd(c.value)
+                  : formatNumber(c.value)}
             </p>
             <p className="text-xs text-muted-foreground">{c.label}</p>
           </div>

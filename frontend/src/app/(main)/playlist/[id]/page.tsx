@@ -1,19 +1,29 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Play, Shuffle, Share2, Edit, MoreVertical, ListMusic, Clock, Globe, Lock, Loader2 } from 'lucide-react';
+import { Reorder } from 'framer-motion';
+import { Play, Shuffle, Share2, Edit, MoreVertical, ListMusic, Clock, Globe, Lock, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SongRow } from '@/components/songs/SongRow';
 import { usePlaylist, qk } from '@/lib/queries';
-import { addToQueue, clearQueue, toSongRef } from '@/lib/library';
+import {
+  addToQueue,
+  clearQueue,
+  deletePlaylist,
+  reorderPlaylist,
+  removeFromPlaylist,
+  toSongRef,
+  updatePlaylist,
+} from '@/lib/library';
+import { Input } from '@/components/ui/input';
 import { useAuthStore } from '@/stores/auth.store';
-import { formatDuration } from '@/lib/utils';
+import { cn, formatDuration } from '@/lib/utils';
 import type { Song } from '@/types';
 
 export default function PlaylistDetailPage() {
@@ -23,8 +33,25 @@ export default function PlaylistDetailPage() {
   const id = String(params.id ?? '');
   const user = useAuthStore((s) => s.user);
   const [enqueuing, setEnqueuing] = useState(false);
+  // Bản sao thứ tự cục bộ để kéo-thả (reorder); orderRef giữ giá trị mới nhất
+  // cho onDragEnd (tránh stale closure).
+  const [order, setOrder] = useState<Song[]>([]);
+  const orderRef = useRef<Song[]>([]);
+  orderRef.current = order;
+  // Header actions: edit modal + menu "..."
+  const [showEdit, setShowEdit] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editDesc, setEditDesc] = useState('');
+  const [editPublic, setEditPublic] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const { data: playlist, isLoading, isError } = usePlaylist(id);
+
+  // Đồng bộ thứ tự từ server mỗi khi playlist đổi (load/thêm/xóa).
+  useEffect(() => {
+    setOrder(playlist?.items?.map((it) => it.song) ?? []);
+  }, [playlist?.items]);
 
   // Chưa đăng nhập → mời đăng nhập (playlist là dữ liệu cá nhân, cần Bearer).
   if (!user) {
@@ -70,8 +97,38 @@ export default function PlaylistDetailPage() {
     );
   }
 
-  const songs = playlist.items?.map((it) => it.song) ?? [];
+  // Hiển thị theo `order` (đã đồng bộ); fallback sang items cho frame đầu.
+  const items = playlist.items?.map((it) => it.song) ?? [];
+  const songs = order.length ? order : items;
   const totalDuration = songs.reduce((sum, s) => sum + (s.duration ?? 0), 0);
+
+  // Lưu thứ tự sau khi thả (dùng orderRef để lấy thứ tự mới nhất).
+  const persistOrder = () => {
+    reorderPlaylist(
+      id,
+      orderRef.current.map((s) => s.youtubeId),
+    )
+      .then(() => qc.invalidateQueries({ queryKey: qk.playlist(id) }))
+      .catch(() => {
+        toast.error('Không thể lưu thứ tự');
+        qc.invalidateQueries({ queryKey: qk.playlist(id) }); // revert theo server
+      });
+  };
+
+  // Xóa 1 bài khỏi playlist (optimistic).
+  const handleRemove = (song: Song) => {
+    const prev = orderRef.current;
+    setOrder((cur) => cur.filter((s) => s.youtubeId !== song.youtubeId));
+    removeFromPlaylist(id, song.youtubeId)
+      .then(() => {
+        toast('Đã xóa khỏi playlist');
+        qc.invalidateQueries({ queryKey: qk.playlist(id) });
+      })
+      .catch(() => {
+        setOrder(prev);
+        toast.error('Không thể xóa khỏi playlist');
+      });
+  };
 
   // Nạp danh sách vào hàng chờ (server /queue) rồi mở player bài đầu. Hàng chờ
   // ở màn hát đọc từ /queue nên phải enqueue thật thì sidebar mới hiện.
@@ -89,6 +146,75 @@ export default function PlaylistDetailPage() {
     } catch {
       toast.error('Không thể phát playlist');
       setEnqueuing(false);
+    }
+  };
+
+  // Header actions
+  const handleShare = async () => {
+    const url = window.location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: playlist.name, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Đã copy link playlist');
+      }
+    } catch {
+      /* user hủy share — bỏ qua */
+    }
+  };
+
+  const openEdit = () => {
+    setEditName(playlist.name);
+    setEditDesc(playlist.description ?? '');
+    setEditPublic(playlist.isPublic);
+    setShowEdit(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editName.trim()) {
+      toast.error('Tên playlist không được trống');
+      return;
+    }
+    setSaving(true);
+    try {
+      await updatePlaylist(id, {
+        name: editName.trim(),
+        description: editDesc.trim() || undefined,
+        isPublic: editPublic,
+      });
+      await qc.invalidateQueries({ queryKey: qk.playlist(id) });
+      void qc.invalidateQueries({ queryKey: qk.playlists });
+      toast.success('Đã lưu playlist');
+      setShowEdit(false);
+    } catch {
+      toast.error('Không thể lưu playlist');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const togglePublic = async () => {
+    setMoreOpen(false);
+    try {
+      await updatePlaylist(id, { isPublic: !playlist.isPublic });
+      void qc.invalidateQueries({ queryKey: qk.playlist(id) });
+      toast.success(playlist.isPublic ? 'Đã chuyển riêng tư' : 'Đã chuyển công khai');
+    } catch {
+      toast.error('Không thể cập nhật');
+    }
+  };
+
+  const handleDelete = async () => {
+    setMoreOpen(false);
+    if (!confirm(`Xóa playlist "${playlist.name}"? Hành động không thể hoàn tác.`)) return;
+    try {
+      await deletePlaylist(id);
+      void qc.invalidateQueries({ queryKey: qk.playlists });
+      toast.success('Đã xóa playlist');
+      router.push('/library?tab=playlists');
+    } catch {
+      toast.error('Không thể xóa playlist');
     }
   };
 
@@ -177,15 +303,47 @@ export default function PlaylistDetailPage() {
             <Shuffle className="mr-2 h-4 w-4" />
             Shuffle
           </Button>
-          <Button size="icon" variant="ghost">
+          <Button size="icon" variant="ghost" onClick={handleShare} title="Chia sẻ">
             <Share2 className="h-5 w-5" />
           </Button>
-          <Button size="icon" variant="ghost">
+          <Button size="icon" variant="ghost" onClick={openEdit} title="Sửa playlist">
             <Edit className="h-5 w-5" />
           </Button>
-          <Button size="icon" variant="ghost">
-            <MoreVertical className="h-5 w-5" />
-          </Button>
+          <div className="relative">
+            <Button
+              size="icon"
+              variant="ghost"
+              title="Thêm"
+              onClick={() => setMoreOpen((v) => !v)}
+            >
+              <MoreVertical className="h-5 w-5" />
+            </Button>
+            {moreOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMoreOpen(false)} />
+                <div className="absolute left-0 top-full z-50 mt-1 w-52 rounded-xl border border-border bg-card shadow-xl py-1">
+                  <button
+                    onClick={togglePublic}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left"
+                  >
+                    {playlist.isPublic ? (
+                      <Lock className="h-4 w-4" />
+                    ) : (
+                      <Globe className="h-4 w-4" />
+                    )}
+                    {playlist.isPublic ? 'Chuyển riêng tư' : 'Chuyển công khai'}
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-sm hover:bg-accent text-left text-red-400"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Xóa playlist
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Songs */}
@@ -207,12 +365,97 @@ export default function PlaylistDetailPage() {
                 <Clock className="h-4 w-4 ml-auto" />
               </span>
             </div>
-            {songs.map((song, idx) => (
-              <SongRow key={`${song.youtubeId}-${idx}`} song={song} index={idx + 1} />
-            ))}
+            <Reorder.Group
+              axis="y"
+              values={songs}
+              onReorder={setOrder}
+              as="div"
+              className="space-y-1"
+            >
+              {songs.map((song, idx) => (
+                <Reorder.Item
+                  key={song.youtubeId}
+                  value={song}
+                  as="div"
+                  onDragEnd={persistOrder}
+                  className="cursor-grab active:cursor-grabbing rounded-xl"
+                  whileDrag={{ scale: 1.02, zIndex: 30 }}
+                >
+                  <SongRow
+                    song={song}
+                    index={idx + 1}
+                    onRemoveFromPlaylist={() => handleRemove(song)}
+                  />
+                </Reorder.Item>
+              ))}
+            </Reorder.Group>
           </div>
         )}
       </div>
+
+      {/* Modal sửa playlist */}
+      {showEdit && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setShowEdit(false)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border border-border bg-card p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold">Sửa playlist</h3>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tên</label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Tên playlist"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Mô tả</label>
+              <textarea
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                placeholder="Mô tả (tuỳ chọn)"
+                rows={3}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setEditPublic((v) => !v)}
+              className="flex w-full items-center justify-between rounded-xl border border-border px-3 py-2 text-sm"
+            >
+              <span className="flex items-center gap-2">
+                {editPublic ? <Globe className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                {editPublic ? 'Công khai' : 'Riêng tư'}
+              </span>
+              <span
+                className={cn(
+                  'h-5 w-9 rounded-full p-0.5 transition-colors',
+                  editPublic ? 'bg-primary' : 'bg-muted',
+                )}
+              >
+                <span
+                  className={cn(
+                    'block h-4 w-4 rounded-full bg-white transition-transform',
+                    editPublic && 'translate-x-4',
+                  )}
+                />
+              </span>
+            </button>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="ghost" onClick={() => setShowEdit(false)} disabled={saving}>
+                Hủy
+              </Button>
+              <Button variant="gradient" onClick={saveEdit} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Lưu'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

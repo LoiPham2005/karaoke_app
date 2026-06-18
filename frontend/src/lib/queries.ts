@@ -8,7 +8,7 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import { getSimilar, getSong, getTrending, searchSongs } from './songs';
+import { getRecent, getSimilar, getSong, getTrending, searchSongs } from './songs';
 import {
   addFavorite,
   addToPlaylist,
@@ -35,9 +35,11 @@ import {
   removeSearchHistory,
 } from './search-history';
 import {
+  getAdminPayments,
   getAdminReports,
   getAdminStats,
   getAdminUsers,
+  setUserPremium,
   updateAdminReport,
   updateAdminUser,
 } from './admin';
@@ -46,6 +48,7 @@ import { useAuthStore } from '@/stores/auth.store';
 // ─────────────────── Query keys ───────────────────
 export const qk = {
   trending: ['trending'] as const,
+  recent: ['recent'] as const,
   search: (q: string) => ['search', q] as const,
   song: (id: string) => ['song', id] as const,
   similar: (id: string) => ['similar', id] as const,
@@ -58,6 +61,7 @@ export const qk = {
   adminStats: ['admin', 'stats'] as const,
   adminUsers: (search: string, role: string) => ['admin', 'users', search, role] as const,
   adminReports: (status: string) => ['admin', 'reports', status] as const,
+  adminPayments: (status: string) => ['admin', 'payments', status] as const,
 };
 
 // ─────────────────── Queries: songs (public) ───────────────────
@@ -65,6 +69,12 @@ export const useTrending = () =>
   useQuery({
     queryKey: qk.trending,
     queryFn: ({ signal }) => getTrending(signal),
+  });
+
+export const useRecent = () =>
+  useQuery({
+    queryKey: qk.recent,
+    queryFn: ({ signal }) => getRecent(signal),
   });
 
 export const useSearch = (q: string) =>
@@ -299,6 +309,24 @@ export const useUpdateAdminReport = () => {
       updateAdminReport(p.id, p.status),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['admin', 'reports'] });
+      void qc.invalidateQueries({ queryKey: qk.adminStats });
+    },
+  });
+};
+
+export const useAdminPayments = (status: string) =>
+  useQuery({
+    queryKey: qk.adminPayments(status),
+    queryFn: () => getAdminPayments({ status: status || undefined, limit: 50 }),
+    placeholderData: keepPreviousData,
+  });
+
+export const useSetUserPremium = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: { id: string; days: number }) => setUserPremium(p.id, p.days),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['admin', 'users'] });
       void qc.invalidateQueries({ queryKey: qk.adminStats });
     },
   });

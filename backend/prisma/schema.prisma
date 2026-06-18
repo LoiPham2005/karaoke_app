@@ -477,6 +477,8 @@ model PlaySession {
   openedByStaffId String? // nhân viên mở phiên (STAFF/OWNER)
   guestCount      Int?
   startedAt       DateTime      @default(now())
+  plannedMinutes  Int? // số phút khách đặt trước (null = mở, tính giờ khi đóng)
+  expiresAt       DateTime? // startedAt + plannedMinutes; cập nhật khi gia hạn
   endedAt         DateTime?
   roomCharge      Int           @default(0) // tiền phòng (VND)
   totalAmount     Int           @default(0) // roomCharge + F&B (VND)

@@ -78,6 +78,20 @@ export class SongsService {
     }
   }
 
+  /// Bài mới được thêm vào hệ thống (Song.cachedAt mới nhất). DB rỗng → [].
+  async recent(limit = 20): Promise<SongResult[]> {
+    try {
+      const rows = await this.prisma.song.findMany({
+        where: { isAvailable: true },
+        orderBy: { cachedAt: 'desc' },
+        take: limit,
+      });
+      return rows.map((s) => this.toSongResult(s));
+    } catch {
+      return [];
+    }
+  }
+
   /// Map 1 row Song (DB) → SongResult (shape client). Bù null → '' cho các
   /// field bắt buộc của SongResult.
   private toSongResult(s: {

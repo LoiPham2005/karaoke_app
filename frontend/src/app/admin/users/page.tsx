@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAdminUsers, useUpdateAdminUser } from '@/lib/queries';
+import { useAdminUsers, useUpdateAdminUser, useSetUserPremium } from '@/lib/queries';
 
 const ROLE_FILTERS = ['', 'USER', 'STAFF', 'OWNER', 'ADMIN', 'SUPER_ADMIN'];
 const ROLE_LABEL: Record<string, string> = {
@@ -32,7 +32,19 @@ export default function AdminUsersPage() {
 
   const { data, isLoading } = useAdminUsers(debounced, role);
   const updateUser = useUpdateAdminUser();
+  const setPremium = useSetUserPremium();
   const users = data?.items ?? [];
+
+  const togglePremium = (id: string, isPremium: boolean) => {
+    setPremium.mutate(
+      { id, days: isPremium ? 0 : 30 },
+      {
+        onSuccess: () =>
+          toast.success(isPremium ? 'Đã gỡ Premium' : 'Đã cấp Premium 30 ngày'),
+        onError: () => toast.error('Không cập nhật được'),
+      },
+    );
+  };
 
   const toggleBan = (id: string, status: string) => {
     const next = status === 'BANNED' ? 'ACTIVE' : 'BANNED';
@@ -134,6 +146,20 @@ export default function AdminUsersPage() {
                   </option>
                 ))}
               </select>
+
+              <Button
+                size="sm"
+                variant={u.isPremium ? 'outline' : 'ghost'}
+                disabled={setPremium.isPending}
+                onClick={() => togglePremium(u.id, u.isPremium)}
+                title={u.isPremium ? 'Gỡ Premium' : 'Cấp Premium 30 ngày'}
+                className="shrink-0"
+              >
+                <Crown className="h-4 w-4 text-amber-400" />
+                <span className="hidden lg:inline ml-1.5">
+                  {u.isPremium ? 'Gỡ Premium' : 'Cấp Premium 30 ngày'}
+                </span>
+              </Button>
 
               <Button
                 size="icon-sm"

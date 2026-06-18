@@ -24,8 +24,15 @@ export default function LoginPage() {
       const user = await loginAction(email.trim(), password);
       toast.success(`Chào ${user.displayName}!`);
       // Admin/Super admin → vào trang quản trị; còn lại vào app người dùng.
-      const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
-      router.push(isAdmin ? '/admin' : '/home');
+      router.push(
+        user.role === 'ADMIN' || user.role === 'SUPER_ADMIN'
+          ? '/admin'
+          : user.role === 'OWNER'
+            ? '/shop'
+            : user.role === 'STAFF'
+              ? '/shop/live'
+              : '/home',
+      );
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Đăng nhập thất bại');
     } finally {
@@ -33,32 +40,37 @@ export default function LoginPage() {
     }
   };
 
-  // 🧪 MOCK: bấm vai trò → "đăng nhập" thẳng vào màn của vai trò đó (chưa ghép API).
-  // App không có nội dung user (UGC) nên KHÔNG cần MODERATOR — chỉ 3 role.
-  const MOCK_ROLES = [
-    { role: 'USER', icon: '🎤', label: 'Người dùng', desc: 'Vào app hát', path: '/home' },
-    { role: 'ADMIN', icon: '👑', label: 'Quản trị', desc: 'Trang admin', path: '/admin' },
-    {
-      role: 'SUPER_ADMIN',
-      icon: '⭐',
-      label: 'Chủ hệ thống',
-      desc: 'Toàn quyền',
-      path: '/admin',
-    },
+  // 🧪 DEV: đăng nhập nhanh bằng TÀI KHOẢN SEED THẬT ở backend (prisma/seed.ts).
+  // Tất cả mật khẩu = "123456". Xoá block này khi lên production.
+  const DEV_ACCOUNTS = [
+    { email: 'user@gmail.com', icon: '🎤', label: 'Người dùng', desc: 'USER' },
+    { email: 'premium@gmail.com', icon: '💎', label: 'Premium', desc: 'USER + Premium' },
+    { email: 'owner@gmail.com', icon: '🏪', label: 'Chủ tiệm', desc: 'OWNER' },
+    { email: 'staff@gmail.com', icon: '🧑‍💼', label: 'Nhân viên', desc: 'STAFF' },
+    { email: 'admin@gmail.com', icon: '👑', label: 'Quản trị', desc: 'ADMIN' },
+    { email: 'superadmin@gmail.com', icon: '⭐', label: 'Chủ hệ thống', desc: 'SUPER_ADMIN' },
   ] as const;
+  const DEV_PASSWORD = '123456';
 
-  const mockLogin = (role: string, path: string) => {
+  const quickLogin = async (devEmail: string) => {
     setIsLoading(true);
-    // Lưu role để các màn sau có thể đọc (mock) — sau này thay bằng auth thật.
     try {
-      localStorage.setItem('mock_role', role);
-    } catch {
-      // ignore (SSR / storage bị chặn)
-    }
-    setTimeout(() => {
-      router.push(path);
+      const user = await loginAction(devEmail, DEV_PASSWORD);
+      toast.success(`Chào ${user.displayName}!`);
+      router.push(
+        user.role === 'ADMIN' || user.role === 'SUPER_ADMIN'
+          ? '/admin'
+          : user.role === 'OWNER'
+            ? '/shop'
+            : user.role === 'STAFF'
+              ? '/shop/live'
+              : '/home',
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Đăng nhập thất bại');
+    } finally {
       setIsLoading(false);
-    }, 300);
+    }
   };
 
   return (
@@ -152,23 +164,23 @@ export default function LoginPage() {
         Đăng nhập với Google
       </Button>
 
-      {/* 🧪 Đăng nhập nhanh theo vai trò (Dev mock) */}
+      {/* 🧪 Đăng nhập nhanh bằng tài khoản seed thật (Dev) */}
       <div className="space-y-3 rounded-xl border border-dashed border-border p-4">
         <p className="text-center text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          ⚡ Đăng nhập nhanh (Dev)
+          ⚡ Đăng nhập nhanh (Dev) · mật khẩu chung: 123456
         </p>
         <div className="grid grid-cols-3 gap-2">
-          {MOCK_ROLES.map((r) => (
+          {DEV_ACCOUNTS.map((a) => (
             <button
-              key={r.role}
+              key={a.email}
               type="button"
               disabled={isLoading}
-              onClick={() => mockLogin(r.role, r.path)}
+              onClick={() => quickLogin(a.email)}
               className="flex flex-col items-center gap-1 rounded-lg border border-border bg-card p-3 text-center transition hover:border-primary hover:bg-primary/5 disabled:opacity-50"
             >
-              <span className="text-2xl leading-none">{r.icon}</span>
-              <span className="text-xs font-semibold">{r.label}</span>
-              <span className="text-[10px] text-muted-foreground">{r.desc}</span>
+              <span className="text-2xl leading-none">{a.icon}</span>
+              <span className="text-xs font-semibold">{a.label}</span>
+              <span className="text-[10px] text-muted-foreground">{a.desc}</span>
             </button>
           ))}
         </div>

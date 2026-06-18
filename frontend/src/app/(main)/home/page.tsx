@@ -8,16 +8,25 @@ import { SongCard } from '@/components/songs/SongCard';
 import { SongRow } from '@/components/songs/SongRow';
 import { Button } from '@/components/ui/button';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { mockSongs, recommendedSongs, newReleases } from '@/mocks/songs';
 import { categories } from '@/mocks/categories';
-import { useTrending } from '@/lib/queries';
+import { useTrending, useRecent, useHistory } from '@/lib/queries';
 import { cn, formatNumber } from '@/lib/utils';
 
 export default function HomePage() {
-  const heroSong = mockSongs[0];
-
   const { data: trending = [], isLoading: trendingLoading, isError } = useTrending();
+  const { data: recent = [] } = useRecent();
+  const { data: history = [] } = useHistory();
   const trendingError = isError ? 'Không tải được bài thịnh hành' : null;
+
+  // Hero = bài hot nhất (thật). Đề xuất = lịch sử hát (đã đăng nhập, dedup) →
+  // fallback trending. Mới ra = recent (thật). Không còn mock.
+  const heroSong = trending[0];
+  const recommended =
+    history.length > 0
+      ? Array.from(
+          new Map(history.map((h) => [h.song.youtubeId, h.song])).values(),
+        ).slice(0, 12)
+      : trending.slice(0, 12);
 
   // Cuộn tới section theo hash (#trending / #new) — shortcut từ Sidebar KHÁM PHÁ.
   // Next App Router không tự cuộn tới hash khi điều hướng → xử lý thủ công.
@@ -39,7 +48,8 @@ export default function HomePage() {
 
   return (
     <div className="container py-6 space-y-10">
-      {/* HERO BANNER */}
+      {/* HERO BANNER — bài hot nhất (thật) */}
+      {heroSong && (
       <section className="relative rounded-3xl overflow-hidden">
         <div className="absolute inset-0">
           <Image src={heroSong.thumbnailUrl} alt={heroSong.title} fill className="object-cover" />
@@ -68,6 +78,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* TRENDING */}
       <section id="trending">
@@ -125,16 +136,22 @@ export default function HomePage() {
       {/* RECOMMENDED */}
       <section>
         <SectionHeader title="✨ Đề xuất cho bạn" desc="Dựa trên lịch sử hát của bạn" />
-        <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex gap-4 pb-4">
-            {recommendedSongs.map((song) => (
-              <div key={song.youtubeId} className="w-48 shrink-0">
-                <SongCard song={song} />
-              </div>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        {recommended.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8">
+            Hát vài bài để nhận đề xuất phù hợp với bạn.
+          </p>
+        ) : (
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-4 pb-4">
+              {recommended.map((song) => (
+                <div key={song.youtubeId} className="w-48 shrink-0">
+                  <SongCard song={song} />
+                </div>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
       </section>
 
       {/* TOP CHARTS */}
@@ -152,16 +169,22 @@ export default function HomePage() {
       {/* NEW RELEASES */}
       <section id="new">
         <SectionHeader title="🆕 Mới ra" desc="Karaoke mới upload" />
-        <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex gap-4 pb-4">
-            {newReleases.map((song) => (
-              <div key={song.youtubeId} className="w-48 shrink-0">
-                <SongCard song={song} />
-              </div>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        {recent.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8">
+            Chưa có bài mới. Tìm và hát bài để cập nhật kho nhạc.
+          </p>
+        ) : (
+          <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex gap-4 pb-4">
+              {recent.map((song) => (
+                <div key={song.youtubeId} className="w-48 shrink-0">
+                  <SongCard song={song} />
+                </div>
+              ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+        )}
       </section>
     </div>
   );

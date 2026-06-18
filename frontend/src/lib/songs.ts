@@ -11,6 +11,10 @@ export function searchSongs(q: string, maxResults = 20, signal?: AbortSignal): P
 export const getTrending = (signal?: AbortSignal): Promise<Song[]> =>
   apiGet<Song[]>('/songs/trending', signal);
 
+/// Bài mới thêm vào hệ thống (theo createdAt). GET /songs/recent — public.
+export const getRecent = (signal?: AbortSignal): Promise<Song[]> =>
+  apiGet<Song[]>('/songs/recent', signal);
+
 /// Chi tiết 1 bài. GET /songs/:youtubeId — public.
 export const getSong = (youtubeId: string, signal?: AbortSignal): Promise<Song> =>
   apiGet<Song>(`/songs/${youtubeId}`, signal);

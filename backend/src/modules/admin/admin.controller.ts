@@ -1,11 +1,21 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Role } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AdminService } from './admin.service';
 import {
+  ListPaymentsDto,
   ListReportsDto,
   ListUsersDto,
+  SetPremiumDto,
   UpdateReportDto,
   UpdateUserDto,
 } from './dto/admin.dto';
@@ -46,5 +56,17 @@ export class AdminController {
   @ApiOperation({ summary: 'Xử lý báo cáo (RESOLVED / REJECTED)' })
   updateReport(@Param('id') id: string, @Body() dto: UpdateReportDto) {
     return this.admin.updateReport(id, dto.status);
+  }
+
+  @Get('payments')
+  @ApiOperation({ summary: 'Danh sách giao dịch (phân trang + lọc status)' })
+  payments(@Query() dto: ListPaymentsDto) {
+    return this.admin.payments(dto);
+  }
+
+  @Post('users/:id/premium')
+  @ApiOperation({ summary: 'Cấp / gỡ Premium thủ công (days = 0 để gỡ)' })
+  setPremium(@Param('id') id: string, @Body() dto: SetPremiumDto) {
+    return this.admin.setUserPremium(id, dto.days);
   }
 }

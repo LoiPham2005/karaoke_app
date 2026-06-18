@@ -37,6 +37,14 @@ export class SongsController {
     return this.songs.trending(20);
   }
 
+  /// GET /api/v1/songs/recent — Public. Bài mới thêm vào hệ thống.
+  @Public()
+  @Get('recent')
+  @ApiOperation({ summary: 'Bài hát mới thêm vào hệ thống' })
+  recent() {
+    return this.songs.recent(20);
+  }
+
   /// GET /api/v1/songs/:youtubeId/similar
   /// Public — bài hát tương tự (search theo nghệ sĩ/tiêu đề). Khai báo TRƯỚC
   /// ':youtubeId' cho rõ ràng (2 segment nên không đụng nhau).

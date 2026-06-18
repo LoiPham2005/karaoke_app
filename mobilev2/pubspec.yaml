@@ -163,3 +163,6 @@ flutter:
           weight: 600
         - asset: assets/fonts/inter/Inter_18pt-Bold.ttf
           weight: 700
+
+# App launcher icon (SingNow) cấu hình theo flavor ở: flutter_launcher_icons-{dev,stg,prod}.yaml
+# Tạo lại icon: fvm dart run flutter_launcher_icons
